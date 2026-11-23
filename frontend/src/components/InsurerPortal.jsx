@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Landmark, ShieldCheck, Lock, Activity, AlertTriangle, Coins, CheckCircle, ExternalLink, BarChart3, EyeOff, PlusCircle, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { Landmark, ShieldCheck, Lock, Activity, Coins, CheckCircle, ExternalLink, BarChart3, EyeOff, PlusCircle, ArrowUpRight, RefreshCw } from 'lucide-react';
 import { ethers } from 'ethers';
 import { MOCK_PATIENT } from '../data/mockData';
 import { useWallet } from '../context/WalletContext';
@@ -8,13 +8,16 @@ import { ClaimManagerABI } from '../contracts/abis';
 
 export default function InsurerPortal({
   claimSettled,
-  auditLogs,
+  poolBalanceEth = 10.00,
+  totalSettledEth = 0.00,
+  settledClaims = [],
+  auditLogs = [],
   addAuditLog,
 }) {
-  const [breakGlassReason, setBreakGlassReason] = useState("Patient unconscious after severe acute trauma - emergency allergy check");
-  const [isBreakGlassActive, setIsBreakGlassActive] = useState(false);
+  const INR_PER_ETH = 10000;
+  const latestClaim = settledClaims[0];
 
-  // Escrow Funding State
+  // Escrow Funding State on Sepolia
   const [depositAmount, setDepositAmount] = useState('0.05');
   const [isDepositing, setIsDepositing] = useState(false);
   const [depositTxHash, setDepositTxHash] = useState('');
@@ -32,7 +35,6 @@ export default function InsurerPortal({
       const bal = await claimManager.escrowBalance();
       setOnChainEscrow(parseFloat(ethers.formatEther(bal)).toFixed(3));
     } catch (err) {
-      // Contract may not be deployed on local provider; keep baseline demo state
       console.warn("Could not query live on-chain escrow balance:", err);
     }
   }, []);
@@ -41,7 +43,7 @@ export default function InsurerPortal({
     fetchEscrowBalance();
   }, [fetchEscrowBalance]);
 
-  // Handle Deposit to Escrow Pool via MetaMask
+  // Handle Deposit to Escrow Pool via MetaMask on Sepolia
   const handleDepositToEscrow = async () => {
     if (!account) {
       const connected = await connectWallet();
@@ -100,24 +102,17 @@ export default function InsurerPortal({
     }
   };
 
-  // Trigger Emergency Break-Glass
-  const handleTriggerBreakGlass = () => {
-    setIsBreakGlassActive(true);
-    if (addAuditLog) {
-      addAuditLog({
-        type: 'EMERGENCY_BREAK_GLASS',
-        title: 'EMERGENCY BREAK-GLASS TRIGGERED',
-        detail: `First Responder accessed emergency health notes for ${MOCK_PATIENT.name}. Reason: "${breakGlassReason}"`,
-        time: new Date().toLocaleTimeString(),
-      });
-    }
-  };
+  // Dynamic Chart values reflecting incoming settled claims
+  const newClaimsCount = settledClaims.length > 1 ? settledClaims.length - 1 : (claimSettled ? 1 : 0);
+  const todayProofCount = 12 + newClaimsCount;
+  const peakProofCount = Math.max(14, todayProofCount);
+  const sunY = Math.max(6, 22 - (newClaimsCount * 4));
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6">
       
-      {/* Top Banner with Forest & Brass Accents */}
-      <div className="parda-surface p-6 border-l-4 border-l-brass-500">
+      {/* Top Banner with Dual Currency & Solvency Overview */}
+      <div className="parda-surface p-6 border border-brass-500/30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 text-brass-400 text-xs font-mono font-semibold uppercase tracking-wider">
@@ -134,65 +129,81 @@ export default function InsurerPortal({
           
           <div className="flex items-center space-x-4 bg-forest-900/90 border border-sage-500/20 rounded p-3.5 font-mono text-xs shrink-0">
             <div>
-              <div className="text-sage-muted text-[10px] uppercase">Live Escrow Pool</div>
-              <div className="text-sm font-bold text-brass-400 font-mono">{onChainEscrow} ETH</div>
+              <div className="text-sage-muted text-[10px] uppercase">Total Pool Liquidity</div>
+              <div className="text-sm font-bold text-brass-400 font-mono">
+                {poolBalanceEth.toFixed(2)} ETH <span className="text-[11px] text-sage-muted font-normal">(₹{(poolBalanceEth * INR_PER_ETH).toLocaleString('en-IN')})</span>
+              </div>
             </div>
             <div className="h-8 w-px bg-sage-500/20" />
             <div>
               <div className="text-sage-muted text-[10px] uppercase">Settled Payouts</div>
-              <div className="text-sm font-bold text-ivory-200 font-mono">{claimSettled ? "1.5 ETH" : "0.0 ETH"}</div>
+              <div className="text-sm font-bold text-ivory-200 font-mono">
+                {totalSettledEth.toFixed(2)} ETH <span className="text-[11px] text-sage-muted font-normal">(₹{(totalSettledEth * INR_PER_ETH).toLocaleString('en-IN')})</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Escrow Liquidity Funding Card via MetaMask (Sepolia) */}
-      <div className="bg-[#12231C] border border-[#9DAF9D]/20 rounded-xl p-5 font-sans">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2 text-[#B99561] text-xs font-semibold uppercase tracking-wider">
+      {/* Escrow Pool Liquidity & On-Chain Deposit Card */}
+      <div className="parda-surface p-6 border border-sage-500/20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center space-x-2 text-brass-400 text-xs font-mono font-semibold uppercase tracking-wider">
               <Coins className="w-4 h-4" />
-              <span>Autonomous Escrow Funding • Sepolia Smart Contract</span>
+              <span>Solvency & Escrow Underwriting Pool (Sepolia Testnet)</span>
             </div>
-            <p className="text-xs text-[#AEB8AA] max-w-xl">
-              Pre-fund the decentralized settlement pool directly on Sepolia. Claim payouts release autonomously without individual underwriter claim reviews.
-            </p>
+            <div className="text-xs text-sage-muted mt-1 font-sans">
+              Segregated on-chain pool held inside <code className="text-ivory-200 font-mono">ClaimManager.sol</code>. Only verifiable Groth16 proofs can release funds to verified hospital payees.
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative w-32">
+            <div className="bg-forest-900/90 border border-sage-500/20 rounded px-3 py-1.5 font-mono text-xs flex items-center space-x-2">
+              <span className="text-sage-muted text-[11px]">On-Chain Escrow:</span>
+              <span className="text-brass-400 font-bold">{onChainEscrow} ETH</span>
+              <button
+                onClick={fetchEscrowBalance}
+                title="Refresh on-chain balance"
+                className="text-sage-muted hover:text-ivory-200 p-0.5 cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-2">
               <input
                 type="number"
                 step="0.01"
-                min="0.01"
+                min="0.001"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="w-full bg-[#0B1713] border border-[#9DAF9D]/30 rounded px-3 py-1.5 text-xs text-[#F3EFE5] font-mono focus:outline-none focus:border-[#B99561]"
+                placeholder="0.05"
+                className="w-24 bg-forest-900 border border-sage-500/30 rounded px-2.5 py-1.5 text-xs text-ivory-200 font-mono focus:outline-none focus:border-brass-500"
               />
-              <span className="absolute right-2.5 top-1.5 text-[11px] text-[#B99561] font-mono">ETH</span>
+              <button
+                onClick={handleDepositToEscrow}
+                disabled={isDepositing}
+                className="btn-brass px-3 py-1.5 rounded text-xs font-mono font-semibold inline-flex items-center space-x-1.5 cursor-pointer"
+              >
+                <PlusCircle className="w-3.5 h-3.5 text-brass-400" />
+                <span>{isDepositing ? "Depositing via MetaMask..." : "Deposit ETH to Pool"}</span>
+              </button>
             </div>
-
-            <button
-              onClick={handleDepositToEscrow}
-              disabled={isDepositing}
-              className="btn-brass px-4 py-2 rounded text-xs font-mono font-medium flex items-center space-x-1.5 cursor-pointer shadow-sm hover:scale-[1.02] transition-transform"
-            >
-              <PlusCircle className="w-3.5 h-3.5 text-[#B99561]" />
-              <span>{isDepositing ? "Broadcasting Deposit..." : "Deposit to Escrow Pool"}</span>
-            </button>
           </div>
         </div>
 
         {depositTxHash && (
-          <div className="mt-3 pt-3 border-t border-[#9DAF9D]/15 flex items-center justify-between text-xs font-mono">
-            <span className="text-emerald-400">✓ Escrow deposit confirmed on Sepolia!</span>
+          <div className="mt-3 text-xs font-mono text-emerald-400 flex items-center space-x-2 bg-emerald-950/40 p-2.5 rounded border border-emerald-500/30">
+            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>Escrow deposit confirmed on Sepolia!</span>
             <a
               href={`https://sepolia.etherscan.io/tx/${depositTxHash}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#B99561] hover:text-[#c9a674] flex items-center space-x-1 underline underline-offset-2"
+              className="text-brass-400 hover:text-brass-300 underline inline-flex items-center gap-1 ml-auto"
             >
-              <span>View Deposit on Etherscan</span>
+              <span>View on Etherscan</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
@@ -221,7 +232,7 @@ export default function InsurerPortal({
               </div>
             </div>
             <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-forest-900 border border-sage-500/30 text-sage-300">
-              [Live Smart Contract Feed]
+              {settledClaims.length} Active {settledClaims.length === 1 ? 'Proof' : 'Proofs'} Anchored
             </span>
           </div>
 
@@ -231,22 +242,23 @@ export default function InsurerPortal({
                 <tr>
                   <th className="py-3 px-3.5">Nullifier Hash</th>
                   <th className="py-3 px-3.5">Hospital Payee</th>
-                  <th className="py-3 px-3.5">Amount</th>
+                  <th className="py-3 px-3.5">Amount (ETH / INR)</th>
                   <th className="py-3 px-3.5">Clinical Privacy</th>
                   <th className="py-3 px-3.5">Proof Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage-500/10">
-                {claimSettled ? (
-                  <tr className="hover:bg-forest-850 transition-colors">
-                    <td className="py-3.5 px-3.5 text-brass-400 font-bold">
-                      0x2dc35...19f3
+                {/* Dynamically mapped settled claims */}
+                {settledClaims.map((claim) => (
+                  <tr key={claim.id} className="hover:bg-forest-850 transition-colors">
+                    <td className="py-3.5 px-3.5 text-brass-400 font-bold" title={claim.nullifier}>
+                      {claim.nullifier.slice(0, 10)}...{claim.nullifier.slice(-4)}
                     </td>
                     <td className="py-3.5 px-3.5 text-ivory-200">
-                      0x7099...79C8 (St. Jude)
+                      {claim.payee}
                     </td>
                     <td className="py-3.5 px-3.5 font-bold text-ivory-200">
-                      1.5 ETH
+                      {claim.amountEth.toFixed(4)} ETH <span className="text-[11px] text-sage-muted font-normal">(₹{(claim.amountEth * INR_PER_ETH).toLocaleString('en-IN')})</span>
                     </td>
                     <td className="py-3.5 px-3.5">
                       <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-forest-900 border border-sage-500/20 text-sage-muted text-[10px]">
@@ -257,39 +269,14 @@ export default function InsurerPortal({
                     <td className="py-3.5 px-3.5">
                       <span className="inline-flex items-center space-x-1 text-brass-400 font-bold">
                         <CheckCircle className="w-3.5 h-3.5 text-brass-400" />
-                        <span>VERIFIED VALID</span>
+                        <span>{claim.status || 'VERIFIED VALID'}</span>
                       </span>
                     </td>
                   </tr>
-                ) : null}
+                ))}
 
-                {/* Simulated Past Settled Claim */}
-                <tr className="hover:bg-forest-850 transition-colors">
-                  <td className="py-3.5 px-3.5 text-brass-400 font-bold">
-                    0x7c814...00ae
-                  </td>
-                  <td className="py-3.5 px-3.5 text-ivory-200">
-                    0x15d3...6A65 (Metropolitan)
-                  </td>
-                  <td className="py-3.5 px-3.5 font-bold text-ivory-200">
-                    2.8 ETH
-                  </td>
-                  <td className="py-3.5 px-3.5">
-                    <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-forest-900 border border-sage-500/20 text-sage-muted text-[10px]">
-                      <EyeOff className="w-3 h-3 text-brass-400" />
-                      <span>[100% REDACTED IN ZK]</span>
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-3.5">
-                    <span className="inline-flex items-center space-x-1 text-brass-400 font-bold">
-                      <CheckCircle className="w-3.5 h-3.5 text-brass-400" />
-                      <span>VERIFIED VALID</span>
-                    </span>
-                  </td>
-                </tr>
-
-                {/* Blocked Duplicate Nullifier Simulation */}
-                <tr className="bg-forest-900/60 border-l-2 border-l-brass-500 hover:bg-forest-850 transition-colors">
+                {/* Simulated Blocked Duplicate Nullifier Attack Demonstration */}
+                <tr className="bg-forest-900/60 border-y border-brass-500/30 hover:bg-forest-850 transition-colors">
                   <td className="py-3.5 px-3.5 text-sage-muted font-bold">
                     0x7c814...00ae
                   </td>
@@ -297,7 +284,7 @@ export default function InsurerPortal({
                     0x15d3...6A65 (Metropolitan)
                   </td>
                   <td className="py-3.5 px-3.5 font-bold text-sage-muted">
-                    2.8 ETH
+                    2.8000 ETH <span className="text-[11px] text-sage-muted/70 font-normal">(₹28,000)</span>
                   </td>
                   <td className="py-3.5 px-3.5">
                     <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-forest-900 text-brass-400 border border-brass-500/30 text-[10px]">
@@ -312,14 +299,16 @@ export default function InsurerPortal({
             </table>
           </div>
 
-          {/* 7-Day Verification Volume Chart (Restrained Architectural Style) */}
+          {/* 7-Day Verification Volume Chart (Dynamic Proofs Reflection) */}
           <div className="p-4 rounded bg-forest-850 border border-sage-500/20 space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-sage-muted">
               <span className="flex items-center gap-1.5 text-ivory-200 font-semibold">
                 <BarChart3 className="w-3.5 h-3.5 text-brass-400" />
                 <span>7-Day Cryptographic Proof Volume</span>
               </span>
-              <span className="text-brass-400">Peak: 14 proofs/day • 0 data leaks</span>
+              <span className="text-brass-400">
+                Peak: {peakProofCount} proofs/day • 0 data leaks ({todayProofCount} proofs today)
+              </span>
             </div>
             
             <div className="w-full pt-2">
@@ -330,12 +319,15 @@ export default function InsurerPortal({
                     <stop offset="100%" stopColor="#12231C" stopOpacity="0.0"/>
                   </linearGradient>
                 </defs>
-                <polygon fill="url(#forestBrassGrad)" points="15,60 55,45 95,50 135,25 175,35 215,15 265,22 265,80 15,80" />
+                <polygon 
+                  fill="url(#forestBrassGrad)" 
+                  points={`15,60 55,45 95,50 135,25 175,35 215,15 265,${sunY} 265,80 15,80`} 
+                />
                 <polyline
                   fill="none"
                   stroke="#B99561"
                   strokeWidth="1.75"
-                  points="15,60 55,45 95,50 135,25 175,35 215,15 265,22"
+                  points={`15,60 55,45 95,50 135,25 175,35 215,15 265,${sunY}`}
                 />
                 <circle cx="15" cy="60" r="3" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
                 <circle cx="55" cy="45" r="3" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
@@ -343,7 +335,7 @@ export default function InsurerPortal({
                 <circle cx="135" cy="25" r="3" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
                 <circle cx="175" cy="35" r="3" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
                 <circle cx="215" cy="15" r="3" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
-                <circle cx="265" cy="22" r="3" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
+                <circle cx="265" cy={sunY} r="3.5" fill="#B99561" stroke="#0B1713" strokeWidth="1" />
               </svg>
               <div className="flex justify-between text-[9px] font-mono text-sage-muted mt-1 px-1">
                 <span>MON</span>
@@ -352,7 +344,7 @@ export default function InsurerPortal({
                 <span>THU</span>
                 <span>FRI</span>
                 <span>SAT</span>
-                <span>SUN</span>
+                <span className="text-brass-400 font-bold">TODAY ({todayProofCount})</span>
               </div>
             </div>
           </div>
@@ -366,11 +358,11 @@ export default function InsurerPortal({
           </div>
         </div>
 
-        {/* Right: Public Signals, Emergency Break-Glass & Live Audit Feed */}
+        {/* Right: Public Signals, Actuarial Reserves & Live Audit Feed */}
         <div className="lg:col-span-4 space-y-6">
           
           {/* Public Calldata Signals Card */}
-          <div className="parda-surface p-6 space-y-3.5 border-l-2 border-l-brass-500">
+          <div className="parda-surface p-6 space-y-3.5 border border-brass-500/30">
             <div className="flex items-center justify-between border-b border-sage-500/20 pb-3">
               <div className="flex items-center space-x-2 text-brass-400">
                 <ShieldCheck className="w-4 h-4 text-brass-400" />
@@ -384,40 +376,61 @@ export default function InsurerPortal({
               Strictly zero medical inputs reach the contract. The ClaimManager verifies these 6 public field elements:
             </p>
             <div className="space-y-1.5 font-mono text-[11px] text-sage-muted bg-forest-850 p-3 rounded border border-sage-500/15">
-              <div><span className="text-brass-400">[0] nullifier:</span> Poseidon(salt, recordId)</div>
+              <div>
+                <span className="text-brass-400">[0] nullifier:</span>{' '}
+                {latestClaim ? `${latestClaim.nullifier.slice(0, 16)}...` : 'Poseidon(salt, recordId)'}
+              </div>
               <div><span className="text-brass-400">[1] hospitalRoot:</span> 2-of-3 Multi-Sig Root</div>
               <div><span className="text-brass-400">[2] commitment:</span> Policy Hash Anchor</div>
-              <div><span className="text-brass-400">[3] claimAmount:</span> ₹15,000 (1.5 ETH)</div>
+              <div>
+                <span className="text-brass-400">[3] claimAmount:</span>{' '}
+                {latestClaim 
+                  ? `₹${(latestClaim.amountEth * INR_PER_ETH).toLocaleString('en-IN')} (${latestClaim.amountEth.toFixed(4)} ETH)` 
+                  : '₹15,000 (1.50 ETH)'}
+              </div>
               <div><span className="text-brass-400">[4] claimDay:</span> Day 20,050</div>
-              <div><span className="text-brass-400">[5] recipient:</span> {account ? `${account.slice(0, 6)}...` : '0x7099...79C8'}</div>
+              <div>
+                <span className="text-brass-400">[5] recipient:</span>{' '}
+                {latestClaim ? latestClaim.payee : (account ? `${account.slice(0, 8)}...` : '0x7099...79C8')}
+              </div>
             </div>
           </div>
 
-          {/* Emergency Break-Glass Card */}
-          <div className="parda-surface p-6 space-y-3.5 border-l-2 border-l-brass-500">
-            <div className="flex items-center space-x-2 text-brass-400">
-              <AlertTriangle className="w-5 h-5 text-brass-400" />
-              <h3 className="text-base font-serif font-normal text-ivory-200">Emergency Break-Glass</h3>
+          {/* Actuarial Escrow & Solvency Status Card (Replaces misplaced break-glass) */}
+          <div className="parda-surface p-6 space-y-3.5 border border-emerald-500/30">
+            <div className="flex items-center justify-between border-b border-sage-500/20 pb-3">
+              <div className="flex items-center space-x-2 text-brass-400">
+                <Coins className="w-4 h-4 text-brass-400" />
+                <h3 className="text-base font-serif font-normal text-ivory-200">Actuarial Reserve & Solvency</h3>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-forest-900 border border-emerald-500/30 text-emerald-400 font-bold">
+                {poolBalanceEth > 0 ? '100% SOLVENT' : 'DEPLETED'}
+              </span>
             </div>
             <p className="text-xs text-sage-muted leading-relaxed font-sans">
-              Incapacitated patient override. First responders gain emergency medical access, permanently logged to an immutable on-chain audit trail.
+              Escrow liquidity is strictly segregated from underwriting operations. Autonomous disbursements execute only when Groth16 circuit proofs satisfy all 7 constraints.
             </p>
-
-            <div className="space-y-2.5 font-mono">
-              <input
-                type="text"
-                value={breakGlassReason}
-                onChange={(e) => setBreakGlassReason(e.target.value)}
-                placeholder="Reason for emergency access..."
-                className="w-full bg-forest-900 border border-sage-500/30 rounded px-3.5 py-2 text-xs text-ivory-200 focus:outline-none focus:border-brass-500"
-              />
-              <button
-                onClick={handleTriggerBreakGlass}
-                className="w-full flex items-center justify-center space-x-2 bg-forest-800 hover:bg-forest-750 border border-brass-500/50 text-brass-400 hover:text-ivory-200 font-mono font-medium py-2 rounded transition-all text-xs cursor-pointer"
-              >
-                <AlertTriangle className="w-3.5 h-3.5 text-brass-400" />
-                <span>Trigger Break-Glass Emergency Log</span>
-              </button>
+            <div className="space-y-2 font-mono text-[11px] bg-forest-850 p-3 rounded border border-sage-500/15">
+              <div className="flex justify-between items-center">
+                <span className="text-sage-muted">Liquidity Reserve:</span>
+                <span className="text-ivory-200 font-bold">
+                  {poolBalanceEth.toFixed(2)} ETH (₹{(poolBalanceEth * INR_PER_ETH).toLocaleString('en-IN')})
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sage-muted">Settled Payouts:</span>
+                <span className="text-brass-400 font-bold">
+                  {totalSettledEth.toFixed(2)} ETH (₹{(totalSettledEth * INR_PER_ETH).toLocaleString('en-IN')})
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sage-muted">Regulator Multi-Sig:</span>
+                <span className="text-brass-400 font-semibold">2-of-3 Quorum Active</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sage-muted">Medical Data Exposure:</span>
+                <span className="text-emerald-400 font-semibold">0% (Shielded in ZK)</span>
+              </div>
             </div>
           </div>
 

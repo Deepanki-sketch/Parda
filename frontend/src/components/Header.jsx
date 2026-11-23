@@ -2,7 +2,14 @@ import React, { useState } from 'react';
 import { Shield, User, Building2, Landmark, CheckCircle2, Copy, RotateCcw, Eye, ShieldAlert, Wallet, ExternalLink, Power } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
 
-export default function Header({ activeRole, setActiveRole, currentAccount, onReplayIntro }) {
+export default function Header({
+  activeRole,
+  setActiveRole,
+  currentAccount,
+  onReplayIntro,
+  currentPatient,
+  onOpenAuthModal,
+}) {
   const [copied, setCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -100,6 +107,39 @@ export default function Header({ activeRole, setActiveRole, currentAccount, onRe
 
         {/* Right: Replay Intro & MetaMask / Wallet Control */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs order-2 sm:order-3 relative">
+          
+          {/* Patient Sovereign Session Quick Switcher */}
+          {currentPatient && onOpenAuthModal ? (
+            <div className="flex items-center space-x-1.5 bg-[#12231C] px-2 py-1 rounded border border-[#B99561]/40 text-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <button
+                type="button"
+                onClick={() => onOpenAuthModal('login')}
+                className="text-[#F3EFE5] font-medium hover:text-[#B99561] transition-colors truncate max-w-[100px] sm:max-w-[130px]"
+                title={`Logged in as ${currentPatient.name}. Click to switch or register.`}
+              >
+                {currentPatient.name}
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenAuthModal('register')}
+                className="text-[10px] text-[#B99561] hover:text-[#F3EFE5] px-1 py-0.5 rounded bg-[#192C23] border border-[#B99561]/30 hidden md:inline-block"
+                title="Register new patient"
+              >
+                +New
+              </button>
+            </div>
+          ) : onOpenAuthModal ? (
+            <button
+              type="button"
+              onClick={() => onOpenAuthModal('login')}
+              className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#192C23] border border-[#B99561]/50 text-[#B99561] hover:text-[#F3EFE5] text-xs font-medium transition-colors"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>Login / Register</span>
+            </button>
+          ) : null}
+
           <button
             onClick={onReplayIntro}
             aria-label="Replay intro"

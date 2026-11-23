@@ -45,10 +45,10 @@ async function main() {
 
     // 2. Deploy HospitalRegistry
     console.log("\n[2/4] Deploying HospitalRegistry with Regulator Governance...");
-    // Regulators default to deployer or separate addresses if configured
+    // Regulators default to deployer and distinct addresses if not configured
     const reg1 = process.env.REGULATOR_1 || deployer.address;
-    const reg2 = process.env.REGULATOR_2 || deployer.address;
-    const reg3 = process.env.REGULATOR_3 || deployer.address;
+    const reg2 = process.env.REGULATOR_2 || (deployer.address.toLowerCase() === "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" ? "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" : "0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
+    const reg3 = process.env.REGULATOR_3 || (deployer.address.toLowerCase() === "0x90f79bf6eb2c4f870365e785982e1f101e93b906" ? "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65" : "0x90F79bf6EB2c4f870365E785982E1f101E93b906");
 
     // Use initial approved hospital root from policy fixtures
     const sampleHospitalRoot = "0x0001020304050607080900010203040506070809000102030405060708090001";
@@ -96,8 +96,9 @@ async function main() {
             const rawCommitment = policyData.policyCommitment || "193847291048291048201948291048291048291048291048291048";
             // Convert to bytes32 hex
             const commitmentBytes32 = ethers.toBeHex(BigInt(rawCommitment), 32);
-            console.log(`\nRegistering Policy Commitment: ${commitmentBytes32}...`);
-            const tx = await claimManager.registerPolicy(commitmentBytes32);
+            const policyLimit = policyData.policyLimit || 50000;
+            console.log(`\nRegistering Policy Commitment: ${commitmentBytes32} with limit ${policyLimit}...`);
+            const tx = await claimManager.registerPolicy(commitmentBytes32, policyLimit);
             await tx.wait();
             console.log("✅ Policy commitment registered on-chain!");
         }

@@ -42,13 +42,6 @@
   background-size: 28px 28px;
 }
 
-.parda-grid-pattern {
-  background-size: 40px 40px;
-  background-image: 
-    linear-gradient(to right, rgba(157, 175, 157, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(157, 175, 157, 0.035) 1px, transparent 1px);
-}
-
 /* Antique Brass Action Button */
 .btn-brass {
   background: linear-gradient(110deg, #12231C 10%, #223B30 25%, #12231C 40%);

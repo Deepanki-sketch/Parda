@@ -1,5 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink, CheckCircle2, ShieldCheck, ArrowRight, Cloud, Lock, Key, Copy, RefreshCw, Database } from 'lucide-react';
+import {
+  ExternalLink,
+  CheckCircle2,
+  ShieldCheck,
+  ArrowRight,
+  Cloud,
+  Lock,
+  Key,
+  Copy,
+  RefreshCw,
+  Database,
+  HeartPulse,
+  AlertTriangle,
+  FolderPlus,
+  Upload,
+  FileCheck,
+  FileText,
+  Plus,
+  User,
+  Sparkles,
+  Shield,
+  Eye,
+} from 'lucide-react';
 import { MOCK_PATIENT, MOCK_FHIR_RECORD, MOCK_HOSPITALS } from '../data/mockData';
 import { useWallet } from '../context/WalletContext';
 import deployedConfig from '../contracts/deployed_addresses.json';
@@ -10,6 +32,11 @@ import {
 } from '../services/healthRecordService';
 import { isSupabaseConfigured, SUPABASE_URL } from '../services/supabaseClient';
 import { computeSha256 } from '../services/cryptoService';
+import {
+  buildFhirBundleFromPatient,
+  ethToInr,
+  inrToEth,
+} from '../services/patientAuthService';
 
 export default function PatientPortal({
   isEncrypted,
@@ -20,12 +47,23 @@ export default function PatientPortal({
   setDoctorAccessGranted,
   addAuditLog,
   claimSettled: externalClaimSettled,
+  settledClaims = [],
+  isBreakGlassActive,
+  breakGlassReason,
+  onRevokeBreakGlass,
   setActiveRole,
+  currentPatient,
+  onOpenAuthModal,
+  onOpenAddRecordModal,
 }) {
+  const activePatient = currentPatient || MOCK_PATIENT;
+  const activeFhirRecord = buildFhirBundleFromPatient(activePatient);
+
   const [selectedHospital, setSelectedHospital] = useState(MOCK_HOSPITALS[0].id);
   const [duration, setDuration] = useState('1 hour');
   const [showSensitive, setShowSensitive] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [previewingDoc, setPreviewingDoc] = useState(null);
   
   // Cloud Sync & Encryption State
   const [isSyncing, setIsSyncing] = useState(false);
@@ -52,13 +90,13 @@ export default function PatientPortal({
   const { account } = useWallet();
   const sharingSectionRef = useRef(null);
 
-  // Initialize and Auto-Sync to Supabase Cloud on mount
+  // Initialize and Auto-Sync to Supabase Cloud on mount or when patient changes
   useEffect(() => {
     let isMounted = true;
 
     async function initVault() {
       try {
-        const patientAddr = account || MOCK_PATIENT.address;
+        const patientAddr = account || activePatient.address;
         
         // 1. Get or create patient's sovereign AES-256 key
         const keyBundle = await getOrCreatePatientKey(patientAddr);
@@ -67,7 +105,7 @@ export default function PatientPortal({
         }
 
         // 2. Compute on-chain SHA-256 digest
-        const hash = await computeSha256(MOCK_FHIR_RECORD);
+        const hash = await computeSha256(activeFhirRecord);
         if (isMounted) {
           setRecordHash(hash);
         }
@@ -76,7 +114,7 @@ export default function PatientPortal({
         setIsSyncing(true);
         const result = await uploadEncryptedRecord({
           patientAddress: patientAddr,
-          recordData: MOCK_FHIR_RECORD,
+          recordData: activeFhirRecord,
           key: keyBundle.key,
         });
 
@@ -98,16 +136,16 @@ export default function PatientPortal({
     return () => {
       isMounted = false;
     };
-  }, [account]);
+  }, [account, activePatient.id]);
 
   const handleManualSync = async () => {
     setIsSyncing(true);
     try {
-      const patientAddr = account || MOCK_PATIENT.address;
+      const patientAddr = account || activePatient.address;
       const keyBundle = await getOrCreatePatientKey(patientAddr);
       const result = await uploadEncryptedRecord({
         patientAddress: patientAddr,
-        recordData: MOCK_FHIR_RECORD,
+        recordData: activeFhirRecord,
         key: keyBundle.key,
       });
       setIsSyncing(false);
@@ -217,20 +255,159 @@ export default function PatientPortal({
 
   const claimSettled = externalClaimSettled;
 
+  const latestClaim = settledClaims[0];
+  const claimAmountEth = latestClaim ? latestClaim.amountEth : 1.5;
+  const claimAmountInr = Math.round(claimAmountEth * 10000);
+  const claimNullifier = latestClaim ? latestClaim.nullifier : '0x2dc35...19f3';
+  const claimHospital = latestClaim ? latestClaim.hospitalName : 'St. Jude Medical Center';
+
   return (
     <div className="font-sans text-[#F3EFE5] space-y-8">
+
+      {/* Sovereign Emergency Break-Glass Alert Banner */}
+      {isBreakGlassActive && (
+        <div className="p-4 rounded bg-amber-950/40 border border-amber-500/40 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs animate-in fade-in">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/30 shrink-0">
+              <HeartPulse className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <div className="font-semibold text-amber-300 font-sans flex items-center gap-2">
+                <span>EMERGENCY CLINICAL ACCESS RECORDED ON ETHEREUM</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-forest-900 border border-amber-500/30 text-amber-400">
+                  AccessLog.sol
+                </span>
+              </div>
+              <p className="text-sage-muted text-[11px] font-sans mt-0.5">
+                St. Jude Medical ER physician invoked emergency break-glass for acute trauma resuscitation: "{breakGlassReason || 'Emergency clinical triage'}". Immutable proof hash anchored to block.
+              </p>
+            </div>
+          </div>
+          {onRevokeBreakGlass && (
+            <button
+              onClick={onRevokeBreakGlass}
+              className="px-3 py-1.5 rounded bg-forest-900 hover:bg-forest-850 border border-amber-500/40 text-amber-300 font-mono text-xs transition-colors cursor-pointer shrink-0"
+            >
+              Close Emergency Window
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Settled Claims & Privacy Receipts Banner */}
+      {claimSettled && (
+        <div className="p-5 rounded bg-emerald-950/40 border border-emerald-500/40 space-y-3 animate-in fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+            <div className="flex items-center space-x-2 text-emerald-400">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <h2 className="text-base font-serif font-normal text-ivory-200">Autonomous Claim Settlement Receipt</h2>
+            </div>
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded bg-forest-900 border border-emerald-500/30 text-emerald-400 font-bold">
+              100% PRIVATE • ZERO EXPOSURE
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
+            <div className="bg-forest-900/80 p-3 rounded border border-sage-500/15">
+              <div className="text-[10px] text-sage-muted uppercase">Disbursed Amount</div>
+              <div className="text-sm font-bold text-ivory-200 mt-0.5">₹{claimAmountInr.toLocaleString('en-IN')} ({claimAmountEth.toFixed(4)} ETH)</div>
+              <div className="text-[10px] text-emerald-400 mt-0.5">Paid from Escrow Pool</div>
+            </div>
+            <div className="bg-forest-900/80 p-3 rounded border border-sage-500/15">
+              <div className="text-[10px] text-sage-muted uppercase">Treating Provider</div>
+              <div className="text-sm font-semibold text-ivory-200 mt-0.5">{claimHospital}</div>
+              <div className="text-[10px] text-brass-400 mt-0.5">Licensed In-Circuit Leaf</div>
+            </div>
+            <div className="bg-forest-900/80 p-3 rounded border border-sage-500/15">
+              <div className="text-[10px] text-sage-muted uppercase">Privacy Guarantee</div>
+              <div className="text-sm font-semibold text-emerald-400 mt-0.5">0 Bytes Medical Leak</div>
+              <div className="text-[10px] text-sage-muted mt-0.5">Diagnosis Blinded in SNARK</div>
+            </div>
+          </div>
+
+          <div className="text-[11px] font-mono text-sage-300 bg-forest-900/60 p-2.5 rounded border border-sage-500/10 flex flex-wrap items-center justify-between gap-1">
+            <span>Nullifier: <span className="text-brass-400 font-bold">{claimNullifier.slice(0, 16)}...</span> (Spent On-Chain)</span>
+            <span className="text-sage-muted">Contract: ClaimManager.sol • Checks-Effects-Interactions</span>
+          </div>
+        </div>
+      )}
       
-      {/* 1. Greeting & Cloud Vault Status Card */}
-      <div className="pt-2 pb-2">
-        <h1 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-normal text-[#F3EFE5] tracking-tight leading-snug">
-          Hi Alex, your records stay with you.
-        </h1>
-        <p className="text-sm sm:text-base text-[#AEB8AA] mt-3 max-w-2xl leading-relaxed">
-          Only you hold the sovereign encryption key. Encrypted records are safely backed up in the cloud, while private diagnostics are shielded from public blockchains and insurer underwriters.
-        </p>
+      {/* 1. Greeting & Sovereign Account Management Bar */}
+      <div className="pt-2 pb-2 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-serif font-normal text-[#F3EFE5] tracking-tight leading-snug">
+              Hi {activePatient.name}, your records stay with you.
+            </h1>
+            <p className="text-sm sm:text-base text-[#AEB8AA] mt-2 max-w-2xl leading-relaxed">
+              Only you hold the sovereign encryption key. Encrypted records are safely backed up in the cloud, while private diagnostics are shielded from public blockchains and insurer underwriters.
+            </p>
+          </div>
+
+          {/* Account Actions */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {onOpenAddRecordModal && (
+              <button
+                type="button"
+                onClick={onOpenAddRecordModal}
+                className="px-3.5 py-2 rounded bg-brass-500 hover:bg-brass-400 text-forest-950 text-xs font-semibold shadow-sm transition-all flex items-center space-x-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Add Documents & Info</span>
+              </button>
+            )}
+
+            {onOpenAuthModal && (
+              <button
+                type="button"
+                onClick={() => onOpenAuthModal('login')}
+                className="px-3 py-2 rounded bg-forest-800 hover:bg-forest-750 border border-sage-500/30 text-xs font-mono text-ivory-200 transition-colors flex items-center space-x-1.5"
+                title="Switch patient or register new profile"
+              >
+                <User className="w-3.5 h-3.5 text-brass-400" />
+                <span>Switch / Register</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Patient Identity & Critical Medical Banner */}
+        <div className="p-3.5 rounded bg-forest-800 border border-sage-500/20 flex flex-wrap items-center justify-between gap-3 text-xs font-sans">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-ivory-200 font-semibold">{activePatient.name}</span>
+              <span className="font-mono text-[11px] text-sage-muted">({activePatient.abhaId || activePatient.id})</span>
+            </div>
+
+            <div className="h-4 w-px bg-sage-500/20 hidden sm:block" />
+
+            <div className="flex items-center space-x-2 text-[11px] font-mono">
+              <span className="text-sage-muted">Policy Cap:</span>
+              <span className="text-brass-400 font-semibold">
+                ₹{(activePatient.policyLimitInr || ethToInr(activePatient.policyLimitEth)).toLocaleString('en-IN')} ({activePatient.policyLimitEth} ETH)
+              </span>
+            </div>
+
+            <div className="h-4 w-px bg-sage-500/20 hidden sm:block" />
+
+            <div className="flex items-center space-x-1.5 text-[11px]">
+              <span className="px-1.5 py-0.5 rounded bg-forest-900 border border-sage-500/25 font-mono text-ivory-200">
+                Blood: {activePatient.bloodGroup || 'O+'}
+              </span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-950/70 border border-amber-500/30 font-mono text-amber-300">
+                Allergies: {activePatient.allergies || 'NKDA'}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-[11px] font-mono text-sage-muted">
+            Attached Files: <span className="text-emerald-400 font-bold">{activePatient.attachedFiles?.length || 0} E2EE Files</span>
+          </div>
+        </div>
 
         {/* Live Supabase Cloud Vault Indicator Banner */}
-        <div className="mt-6 p-4 rounded bg-[#12231C] border border-[#B99561]/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="mt-2 p-4 rounded bg-[#12231C] border border-[#B99561]/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
             <div className="w-10 h-10 rounded bg-[#192C23] border border-[#B99561]/50 flex items-center justify-center text-[#B99561] shrink-0">
               <Cloud className="w-5 h-5 text-[#B99561]" />
@@ -273,12 +450,12 @@ export default function PatientPortal({
       {/* 2. Asymmetric Main Columns: 60% Left, 40% Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         
-        {/* Main Column (~60%): Your latest visit */}
+        {/* Main Column (~60%): Your latest visit & Attached Files */}
         <div className="lg:col-span-7 bg-[#12231C] rounded border border-[#9DAF9D]/15 p-6 sm:p-8 space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-[#9DAF9D]/15">
             <div>
               <h2 className="text-lg font-medium text-[#F3EFE5]">
-                Your latest visit
+                Your latest visit & diagnostic records
               </h2>
               <div className="text-xs text-[#AEB8AA] font-mono mt-0.5">
                 AES-256-GCM Encrypted · Client-Side Private Vault
@@ -299,7 +476,7 @@ export default function PatientPortal({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-4 border-b border-[#9DAF9D]/10">
               <span className="text-[#AEB8AA] text-xs">Date & Facility</span>
               <span className="text-[#F3EFE5] font-medium">
-                {MOCK_FHIR_RECORD.condition.recordedDate} · St. Jude Medical Center
+                {activePatient.condition?.recordedDate || '2024-11-20'} · St. Jude Medical Center
               </span>
             </div>
 
@@ -313,7 +490,13 @@ export default function PatientPortal({
               </div>
               <div className="text-[#F3EFE5]">
                 {showSensitive ? (
-                  <span>{MOCK_FHIR_RECORD.condition.display} (ICD-10: {MOCK_FHIR_RECORD.condition.code})</span>
+                  <div>
+                    <span className="font-semibold">{activePatient.condition?.display || 'Essential hypertension'}</span>
+                    <span className="text-xs text-sage-muted font-mono ml-2">(ICD-10: {activePatient.condition?.code || 'I10'})</span>
+                    {activePatient.condition?.notes && (
+                      <p className="text-xs text-sage-muted mt-1 italic">{activePatient.condition.notes}</p>
+                    )}
+                  </div>
                 ) : (
                   <span className="inline-block px-2 py-0.5 rounded bg-[#192C23] text-[#AEB8AA] text-xs font-mono">
                     •••••••••••••••• (Encrypted in Supabase)
@@ -332,7 +515,13 @@ export default function PatientPortal({
               </div>
               <div className="text-[#F3EFE5]">
                 {showSensitive ? (
-                  <span>{MOCK_FHIR_RECORD.procedure.display} (CPT: {MOCK_FHIR_RECORD.procedure.code})</span>
+                  <div>
+                    <span>{activePatient.procedure?.display || 'Outpatient consultation'}</span>
+                    <span className="text-xs text-sage-muted font-mono ml-2">(CPT: {activePatient.procedure?.code || '99213'})</span>
+                    <div className="text-xs text-brass-400 font-mono mt-0.5">
+                      Estimated Cost: ₹{(activePatient.procedure?.costInr || ethToInr(activePatient.procedure?.costEth || 1.5)).toLocaleString('en-IN')} ({activePatient.procedure?.costEth || '1.5'} ETH)
+                    </div>
+                  </div>
                 ) : (
                   <span className="inline-block px-2 py-0.5 rounded bg-[#192C23] text-[#AEB8AA] text-xs font-mono">
                     •••••••••••• (Encrypted in Supabase)
@@ -351,13 +540,97 @@ export default function PatientPortal({
               </div>
               <div className="text-[#F3EFE5]">
                 {showSensitive ? (
-                  <span>{MOCK_FHIR_RECORD.prescription.medication} — {MOCK_FHIR_RECORD.prescription.dosage}</span>
+                  <span>
+                    {activePatient.prescription?.medication || 'Lisinopril 10mg Oral Tablet'} — {activePatient.prescription?.dosage || 'Once daily with water'}
+                  </span>
                 ) : (
                   <span className="inline-block px-2 py-0.5 rounded bg-[#192C23] text-[#AEB8AA] text-xs font-mono">
                     •••••••••••••••••••••••• (Encrypted in Supabase)
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* ============================================================== */}
+            {/* ATTACHED MEDICAL FILES & REPORTS SECTION */}
+            {/* ============================================================== */}
+            <div className="pt-2 pb-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-mono text-[#AEB8AA] uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[#B99561]" />
+                  <span>Attached Encrypted Medical Files ({activePatient.attachedFiles?.length || 0})</span>
+                </div>
+                {onOpenAddRecordModal && (
+                  <button
+                    type="button"
+                    onClick={onOpenAddRecordModal}
+                    className="text-xs text-[#B99561] hover:text-[#c9a674] font-medium flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Upload More</span>
+                  </button>
+                )}
+              </div>
+
+              {(!activePatient.attachedFiles || activePatient.attachedFiles.length === 0) ? (
+                <div className="p-4 rounded bg-[#0B1713] border border-[#9DAF9D]/15 text-center text-xs text-[#AEB8AA]/80 italic">
+                  No medical files attached yet. Click "+ Add Documents & Info" to upload lab scans or prescriptions.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {activePatient.attachedFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="p-3 rounded bg-[#0B1713] border border-[#9DAF9D]/20 hover:border-[#B99561]/40 transition-colors text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start space-x-2.5 min-w-0">
+                          <FileCheck className="w-4 h-4 text-[#B99561] shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <div className="font-medium text-[#F3EFE5] truncate">{file.name}</div>
+                            <div className="text-[10px] text-[#AEB8AA] font-mono flex flex-wrap items-center gap-2 mt-0.5">
+                              <span className="text-[#B99561]">{file.category}</span>
+                              <span>•</span>
+                              <span>{file.sizeFormatted}</span>
+                              <span>•</span>
+                              <span>Uploaded {file.uploadDate}</span>
+                              <span>•</span>
+                              <span className="text-emerald-400">AES-256-GCM Verified</span>
+                            </div>
+                            <div className="text-[10px] font-mono text-[#AEB8AA]/60 truncate mt-0.5">
+                              Digest: {file.fileHash}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setPreviewingDoc(previewingDoc?.id === file.id ? null : file)}
+                          className="px-2 py-1 rounded bg-[#192C23] border border-[#9DAF9D]/20 hover:border-[#B99561]/40 text-[10px] font-mono text-[#B99561] shrink-0 transition-colors"
+                        >
+                          {previewingDoc?.id === file.id ? 'Hide Ciphertext' : 'Inspect Ciphertext'}
+                        </button>
+                      </div>
+
+                      {/* Decryption Inspector Drawer */}
+                      {previewingDoc?.id === file.id && (
+                        <div className="mt-2.5 p-2.5 rounded bg-[#12231C] border border-[#B99561]/30 font-mono text-[11px] text-[#AEB8AA] space-y-1.5 animate-in fade-in">
+                          <div className="flex items-center justify-between text-xs text-emerald-400 font-semibold">
+                            <span>Decrypted Locally in Browser RAM</span>
+                            <span className="text-[10px] text-[#AEB8AA]">0 Bytes Sent Plaintext</span>
+                          </div>
+                          <div className="text-[#F3EFE5] bg-[#0B1713] p-2 rounded border border-[#9DAF9D]/15 text-[11px] break-words">
+                            {file.previewText || 'AES-256-GCM decrypted verification passed successfully.'}
+                          </div>
+                          <div className="text-[10px] text-sage-muted">
+                            Ciphertext Size: {file.encryptedSize} • SHA-256 On-Chain Commitment Anchored
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Cryptographic Key & Anchor Box */}
@@ -612,11 +885,13 @@ export default function PatientPortal({
         <div className="px-5 pb-5 pt-2 border-t border-[#9DAF9D]/10 font-mono text-xs text-[#AEB8AA] space-y-2.5">
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
             <span className="text-[#AEB8AA]/70">Policy ID</span>
-            <span className="text-[#F3EFE5]">{MOCK_PATIENT.policyId}</span>
+            <span className="text-[#F3EFE5]">{activePatient.policyId}</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
             <span className="text-[#AEB8AA]/70">Coverage Limit</span>
-            <span className="text-[#F3EFE5]">{MOCK_PATIENT.policyLimitEth} ETH</span>
+            <span className="text-[#F3EFE5]">
+              ₹{(activePatient.policyLimitInr || ethToInr(activePatient.policyLimitEth)).toLocaleString('en-IN')} ({activePatient.policyLimitEth} ETH)
+            </span>
           </div>
           <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
             <span className="text-[#AEB8AA]/70">Supabase Cloud Endpoint</span>

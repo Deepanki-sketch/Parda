@@ -1,11 +1,10 @@
 {
-  "network": "sepolia",
-  "chainId": "11155111",
-  "verifier": "0xC1b85dBd7895be6940fF8405f5e4265d87e9885F",
-  "hospitalRegistry": "0x244375F98cC4f6C97ba8022127c07E82e9ff1d58",
-  "claimManager": "0x0F5a4527838C5bc177990283c28826C39e7aC9A6",
-  "accessLog": "0x23130A8D3f44690f9C00485fC19D8aDea456387d",
-  "payoutWeiPerRupee": "100000000000",
-  "deployedAt": "2026-11-23T09:33:50.359Z",
-  "blockExplorerUrl": "https://sepolia.etherscan.io"
+  "network": "hardhat",
+  "chainId": "31337",
+  "verifier": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "hospitalRegistry": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  "claimManager": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "accessRegistry": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  "auditAnchor": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+  "hospitalMerkleRoot": "0x08581786b454cf726808eca1e5bddfbb948f741cd5ae3d89b6c65f3aeda1da7b"
 }

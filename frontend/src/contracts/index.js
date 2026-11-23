@@ -236,6 +236,13 @@ export const CONTRACT_ABIS = {
     },
     {
       "inputs": [],
+      "name": "depositPool",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "escrowBalance",
       "outputs": [
         {
