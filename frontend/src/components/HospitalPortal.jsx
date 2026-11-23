@@ -392,7 +392,7 @@ export default function HospitalPortal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             {/* Standard Delegation Pathway */}
-            <div className="p-4 rounded bg-forest-850 border border-sage-500/20 flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded bg-forest-850 flex flex-col justify-between space-y-3 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <div>
                 <div className="text-xs font-semibold text-ivory-200 flex items-center gap-1.5 mb-1 font-sans">
                   <CheckCircle2 className="w-3.5 h-3.5 text-brass-400" />
@@ -404,7 +404,7 @@ export default function HospitalPortal({
               </div>
               <button
                 onClick={() => setActiveRole('patient')}
-                className="btn-brass w-full inline-flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-2 rounded cursor-pointer"
+                className="btn-brass btn-pressable w-full inline-flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-2 rounded cursor-pointer"
               >
                 <span>Switch to Patient Vault</span>
                 <ArrowRight className="w-3.5 h-3.5 text-brass-400" />
@@ -412,7 +412,7 @@ export default function HospitalPortal({
             </div>
 
             {/* Emergency Trauma Break-Glass Pathway */}
-            <div className="p-4 rounded bg-forest-850 border border-amber-500/30 flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded bg-forest-850 flex flex-col justify-between space-y-3 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <div>
                 <div className="text-xs font-semibold text-amber-400 flex items-center gap-1.5 mb-1 font-sans">
                   <HeartPulse className="w-3.5 h-3.5 text-amber-400" />
@@ -473,7 +473,7 @@ export default function HospitalPortal({
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             
             {/* Left Column: Witness Formulation & Private Inputs */}
-            <div className="parda-surface p-6 space-y-5">
+            <div className="parda-surface p-6 space-y-5 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <div className="flex items-center justify-between border-b border-sage-500/20 pb-4">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded bg-forest-800 border border-sage-500/25 flex items-center justify-center text-brass-400">
@@ -532,7 +532,7 @@ export default function HospitalPortal({
               </div>
 
               <div className="space-y-4">
-                <div className="bg-forest-850 border border-sage-500/20 rounded p-4 space-y-2 text-xs font-mono">
+                <div className="bg-forest-850 rounded p-4 space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                   <div className="flex items-center justify-between text-sage-muted">
                     <span>PATIENT:</span>
                     <span className="font-semibold text-ivory-200">{activePatient.name}</span>
@@ -554,7 +554,7 @@ export default function HospitalPortal({
                 </div>
 
                 {/* Supabase E2EE Ingestion Banner */}
-                <div className="bg-[#12231C] border border-[#B99561]/35 rounded p-3 text-xs font-mono space-y-1.5">
+                <div className="bg-[#12231C] rounded p-3 text-xs font-mono space-y-1.5 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                   <div className="flex items-center justify-between">
                     <span className="text-[#AEB8AA] flex items-center gap-1.5 font-sans font-medium text-xs">
                       <Cloud className="w-3.5 h-3.5 text-[#B99561]" />
@@ -570,7 +570,7 @@ export default function HospitalPortal({
                 </div>
 
                 {/* Private Clinical Details Card with Protected Tag */}
-                <div className="bg-forest-850 border border-sage-500/25 rounded p-4 space-y-2">
+                <div className="bg-forest-850 rounded p-4 space-y-2 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-sage-300 font-medium font-sans">Private Clinical Condition:</span>
                     <span className="px-2 py-0.5 rounded bg-forest-900 text-brass-400 text-[10px] font-mono border border-brass-500/30">
@@ -655,7 +655,7 @@ export default function HospitalPortal({
                 <button
                   onClick={handleGenerateProof}
                   disabled={isProving || isOverPolicyLimit}
-                  className={`btn-brass w-full flex items-center justify-center space-x-2 font-mono text-xs font-medium py-3 rounded cursor-pointer ${
+                  className={`btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-medium py-3 rounded cursor-pointer ${
                     isOverPolicyLimit ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
@@ -664,7 +664,7 @@ export default function HospitalPortal({
                 </button>
               ) : (
                 <div className="space-y-3">
-                  <div className="bg-forest-850 border border-brass-500/40 rounded p-3.5 flex items-center justify-between text-xs text-ivory-200 font-mono">
+                  <div className="bg-forest-850 rounded p-3.5 flex items-center justify-between text-xs text-ivory-200 font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                     <div className="flex items-center space-x-2">
                       <CheckCircle2 className="w-4 h-4 text-brass-400" />
                       <span>Groth16 Proof Synthesized!</span>
@@ -678,7 +678,7 @@ export default function HospitalPortal({
                         <button
                           onClick={handleOnChainSettlement}
                           disabled={onChainStep === 'generating' || onChainStep === 'broadcasting' || onChainStep === 'mining'}
-                          className="btn-brass w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
+                          className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
                         >
                           <Send className="w-4 h-4 text-brass-400" />
                           <span>
@@ -691,7 +691,7 @@ export default function HospitalPortal({
                       ) : (
                         <button
                           onClick={executeInstantSimulation}
-                          className="btn-brass w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer"
+                          className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer"
                         >
                           <Send className="w-4 h-4 text-brass-400" />
                           <span>Submit Proof (Instant Demo Simulation)</span>
@@ -717,7 +717,7 @@ export default function HospitalPortal({
                   ) : (
                     /* Breakthrough Success Banner + Sequential Claim Reset Button */
                     <div className="space-y-3">
-                      <div className="bg-emerald-950/70 border border-emerald-500/40 rounded p-4 text-center space-y-2 text-xs font-mono">
+                      <div className="bg-emerald-950/70 rounded p-4 text-center space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                         <div className="text-emerald-300 font-bold flex items-center justify-center space-x-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                           <span>CLAIM SETTLED ON-CHAIN!</span>
@@ -756,7 +756,7 @@ export default function HospitalPortal({
             </div>
 
             {/* Right Column: 7-Stage Zero-Knowledge Eligibility Sequence */}
-            <div className="parda-surface p-6 space-y-5">
+            <div className="parda-surface p-6 space-y-5 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <div className="flex items-center justify-between border-b border-sage-500/20 pb-4">
                 <div className="flex items-center space-x-2.5">
                   <div className="w-8 h-8 rounded bg-forest-800 border border-sage-500/25 flex items-center justify-center text-brass-400">
@@ -775,7 +775,7 @@ export default function HospitalPortal({
               {/* Stepper Display with Progressive Disclosure */}
               {!isProving && !proofGenerated && !showConstraintDetails ? (
                 <div className="space-y-3 font-sans text-xs">
-                  <div className="p-4 rounded bg-forest-850 border border-sage-500/20 space-y-2.5">
+                  <div className="p-4 rounded bg-forest-850 space-y-2.5 stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                     <div className="font-semibold text-ivory-200 flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-brass-400">
                         <Lock className="w-3.5 h-3.5" />
@@ -844,13 +844,14 @@ export default function HospitalPortal({
                     return (
                       <div
                         key={item.step}
-                        className={`p-2.5 rounded border transition-all ${
+                        className={`p-2.5 rounded transition-all stroke-2-golden ${
                           isDone
-                            ? 'bg-forest-850 border-sage-500/30'
+                            ? 'bg-forest-850'
                             : isCurrent
-                            ? 'bg-forest-800 border-brass-500 shadow-sm'
-                            : 'bg-forest-900/60 border-sage-500/10 opacity-60'
+                            ? 'bg-forest-800 shadow-sm'
+                            : 'bg-forest-900/60 opacity-60'
                         }`}
+                        style={{ border: '2px solid #9E7C4B' }}
                       >
                         <div className="flex items-center justify-between">
                           <span className={`text-xs font-semibold ${isDone ? 'text-ivory-200' : isCurrent ? 'text-brass-400' : 'text-sage-muted'}`}>
@@ -871,7 +872,7 @@ export default function HospitalPortal({
 
               {/* Public Signals Calldata Preview */}
               {proofGenerated && (
-                <div className="bg-forest-850 border border-sage-500/20 rounded p-4 space-y-2 text-xs font-mono">
+                <div className="bg-forest-850 rounded p-4 space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                   <div className="text-[11px] text-sage-muted uppercase tracking-wider flex items-center justify-between">
                     <span>Public Signals Ready for ClaimManager.sol:</span>
                     <span className="text-brass-400 font-bold">6 Scalars</span>
@@ -888,27 +889,35 @@ export default function HospitalPortal({
               )}
 
               {/* Active Enclave ZK Telemetry Card (Eliminates dead vertical space) */}
-              <div className="bg-forest-850/80 border border-sage-500/15 rounded p-3.5 space-y-1.5 text-xs font-mono text-sage-muted">
-                <div className="flex items-center justify-between text-ivory-200 font-sans font-medium text-xs">
-                  <span className="flex items-center gap-1.5 text-brass-400">
-                    <Server className="w-3.5 h-3.5" />
+              <div 
+                className="rounded-xl p-3.5 space-y-1.5 text-xs font-mono backdrop-blur-sm stroke-2-golden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.16) 0%, rgba(185, 149, 97, 0.10) 100%)',
+                  backgroundColor: 'rgba(185, 149, 97, 0.12)',
+                  border: '2px solid #9E7C4B',
+                  boxShadow: '0 2px 10px rgba(185, 149, 97, 0.12)'
+                }}
+              >
+                <div className="flex items-center justify-between font-sans font-medium text-xs">
+                  <span className="flex items-center gap-1.5 font-bold" style={{ color: '#8C652D' }}>
+                    <Server className="w-3.5 h-3.5" style={{ color: '#8C652D', stroke: '#8C652D' }} />
                     <span>Enclave Proof Telemetry</span>
                   </span>
-                  <span className="text-[10px] font-mono text-emerald-400 bg-forest-900 px-2 py-0.5 rounded border border-emerald-500/30">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(185, 149, 97, 0.20)', borderColor: 'rgba(185, 149, 97, 0.50)', color: '#7A5522' }}>
                     Groth16 (BN254)
                   </span>
                 </div>
-                <div className="flex justify-between text-[11px]">
+                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
                   <span>Circuit Constraints:</span>
-                  <span className="text-ivory-200">14,208 R1CS</span>
+                  <span className="font-semibold" style={{ color: '#2B2319' }}>14,208 R1CS</span>
                 </div>
-                <div className="flex justify-between text-[11px]">
+                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
                   <span>On-Chain Gas:</span>
-                  <span className="text-ivory-200">~214,000 gas (EVM Pairing)</span>
+                  <span className="font-semibold" style={{ color: '#2B2319' }}>~214,000 gas (EVM Pairing)</span>
                 </div>
-                <div className="flex justify-between text-[11px]">
+                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
                   <span>Enclave Shield:</span>
-                  <span className="text-emerald-400">Zero Clinical Leakage</span>
+                  <span className="font-bold" style={{ color: '#8C652D' }}>Zero Clinical Leakage</span>
                 </div>
               </div>
 

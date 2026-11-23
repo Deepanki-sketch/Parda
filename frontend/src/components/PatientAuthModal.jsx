@@ -450,7 +450,7 @@ export default function PatientAuthModal({
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-2.5 px-4 rounded bg-brass-500 hover:bg-brass-400 text-forest-950 font-medium text-sm transition-colors shadow-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
+                    className="btn-parda-white w-full py-2.5 px-4 rounded-xl font-medium text-sm transition-colors shadow-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
                   >
                     {isLoading ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1155,7 +1155,7 @@ export default function PatientAuthModal({
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="px-6 py-2.5 rounded bg-brass-500 hover:bg-brass-400 text-forest-950 font-semibold text-xs flex items-center space-x-2 shadow-lg disabled:opacity-50 cursor-pointer"
+                      className="btn-parda-white px-6 py-2.5 rounded-xl font-semibold text-xs flex items-center space-x-2 shadow-lg disabled:opacity-50 cursor-pointer"
                     >
                       {isLoading ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />

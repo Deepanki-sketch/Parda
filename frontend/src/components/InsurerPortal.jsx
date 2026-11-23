@@ -23,6 +23,9 @@ export default function InsurerPortal({
   const [depositTxHash, setDepositTxHash] = useState('');
   const [depositError, setDepositError] = useState('');
   const [onChainEscrow, setOnChainEscrow] = useState('10.0');
+  const [filterQuery, setFilterQuery] = useState('');
+  const [selectedClaimId, setSelectedClaimId] = useState(null);
+  const [copiedNullifier, setCopiedNullifier] = useState(null);
 
   const { account, isSepolia, connectWallet, switchNetwork, getProviderOrSigner } = useWallet();
 
@@ -231,9 +234,18 @@ export default function InsurerPortal({
                 <div className="text-[11px] font-mono text-sage-muted">03.01 // STRICTLY ZERO MEDICAL DATA EXPOSED</div>
               </div>
             </div>
-            <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-forest-900 border border-sage-500/30 text-sage-300">
-              {settledClaims.length} Active {settledClaims.length === 1 ? 'Proof' : 'Proofs'} Anchored
-            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Filter by nullifier or hospital..."
+                value={filterQuery}
+                onChange={(e) => setFilterQuery(e.target.value)}
+                className="px-2.5 py-1 rounded bg-forest-900 border border-sage-500/25 text-xs text-ivory-200 placeholder:text-sage-muted/50 focus:border-brass-400 focus:outline-none w-48 sm:w-60"
+              />
+              <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-forest-900 border border-sage-500/30 text-sage-300 shrink-0">
+                {settledClaims.length} Active {settledClaims.length === 1 ? 'Proof' : 'Proofs'} Anchored
+              </span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">

@@ -12,7 +12,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
   return (
     <div className="space-y-8 font-sans text-[#F3EFE5]">
       {/* Header Banner */}
-      <div className="bg-[#12231C] border border-[#9DAF9D]/20 rounded-2xl p-6 sm:p-8">
+      <div className="bg-[#12231C] border border-[#9DAF9D]/20 rounded-2xl p-6 sm:p-8 parda-big-box">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2 text-[#B99561] text-xs font-semibold uppercase tracking-wider mb-2">
@@ -34,7 +34,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
       {/* 3-Column Comparison Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Column 1: Hospital View */}
-        <div className="bg-[#12231C] border border-[#9DAF9D]/20 rounded-2xl p-6 space-y-4">
+        <div className="bg-[#12231C] rounded-2xl p-6 space-y-4 parda-big-box stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
           <div className="flex items-center justify-between pb-3 border-b border-[#9DAF9D]/15">
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-[#B99561]" />
@@ -49,34 +49,34 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
           </p>
 
           <div className="space-y-3 font-mono text-xs">
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Patient Identity:</span>
               <span className="text-[#F3EFE5] font-semibold">Alex Doe (DOB: 1992-05-14)</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Diagnosis (ICD-10):</span>
               <span className="text-amber-400 font-semibold">{MOCK_FHIR_RECORD.condition.display} ({MOCK_FHIR_RECORD.condition.code})</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Procedure (CPT):</span>
               <span className="text-[#B99561] font-semibold">{MOCK_FHIR_RECORD.procedure.display} (Code: {MOCK_FHIR_RECORD.procedure.code})</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Prescription:</span>
               <span className="text-[#F3EFE5] font-semibold">{MOCK_FHIR_RECORD.prescription.medication} ({MOCK_FHIR_RECORD.prescription.dosage})</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Access Protocol:</span>
               <span className="text-emerald-400 font-semibold text-[11px]">
                 {isBreakGlassActive ? 'EMERGENCY TRAUMA OVERRIDE (AccessLog.sol)' : 'STANDARD PATIENT-WRAPPED KEY (DEK)'}
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Claim Reimbursement:</span>
               <span className="text-[#B99561] font-bold">₹{claimInr.toLocaleString('en-IN')} ({claimEth.toFixed(4)} ETH testnet equivalent)</span>
             </div>
@@ -84,7 +84,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
         </div>
 
         {/* Column 2: Insurer View */}
-        <div className="bg-[#12231C] border border-[#B99561]/30 rounded-2xl p-6 space-y-4">
+        <div className="bg-[#12231C] rounded-2xl p-6 space-y-4 parda-big-box stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
           <div className="flex items-center justify-between pb-3 border-b border-[#9DAF9D]/15">
             <div className="flex items-center space-x-2">
               <Shield className="w-4 h-4 text-[#B99561]" />
@@ -99,7 +99,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
           </p>
 
           <div className="space-y-3 font-mono text-xs">
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Diagnosis / Condition:</span>
               <span className="text-emerald-400 flex items-center space-x-1.5">
                 <Lock className="w-3.5 h-3.5" />
@@ -107,7 +107,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Procedure / Treatment:</span>
               <span className="text-emerald-400 flex items-center space-x-1.5">
                 <Lock className="w-3.5 h-3.5" />
@@ -115,7 +115,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Prescriptions:</span>
               <span className="text-emerald-400 flex items-center space-x-1.5">
                 <Lock className="w-3.5 h-3.5" />
@@ -123,12 +123,12 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
               </span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Policy Commitment:</span>
               <span className="text-[#F3EFE5] truncate block">0x498a1c8f92e1047201948291048...</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Claim Status & Verification:</span>
               <span className="text-emerald-400 font-bold flex items-center space-x-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
@@ -139,7 +139,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
         </div>
 
         {/* Column 3: On-Chain View */}
-        <div className="bg-[#12231C] border border-[#9DAF9D]/20 rounded-2xl p-6 space-y-4">
+        <div className="bg-[#12231C] rounded-2xl p-6 space-y-4 parda-big-box stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
           <div className="flex items-center justify-between pb-3 border-b border-[#9DAF9D]/15">
             <div className="flex items-center space-x-2">
               <Database className="w-4 h-4 text-[#B99561]" />
@@ -154,27 +154,27 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
           </p>
 
           <div className="space-y-3 font-mono text-xs">
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">pubSignals[0] (Nullifier):</span>
               <span className="text-purple-300 truncate block">{nullifier.slice(0, 20)}... (Poseidon)</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">pubSignals[1] (Hospital Root):</span>
               <span className="text-purple-300 truncate block">0x2b810482910482019482...</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">pubSignals[2] (Policy Commitment):</span>
               <span className="text-purple-300 truncate block">0x498a1c8f92e104720194...</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">pubSignals[3] (Claim Amount):</span>
               <span className="text-emerald-400 font-bold">₹{claimInr.toLocaleString('en-IN')} ({claimEth.toFixed(4)} ETH)</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/10">
+            <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">pubSignals[5] (Recipient):</span>
               <span className="text-[#F3EFE5] truncate block">{payee.slice(0, 22)}...</span>
             </div>

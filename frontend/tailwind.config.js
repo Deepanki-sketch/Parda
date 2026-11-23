@@ -8,36 +8,36 @@ export default {
     extend: {
       colors: {
         forest: {
-          950: '#060E0B',
-          900: '#0B1713', // Primary background
-          850: '#0F1E19',
-          800: '#12231C', // Card surface 1
-          750: '#162820',
-          700: '#192C23', // Card surface 2 (elevated)
-          600: '#243E35', // Accent border / deep forest
-          500: '#2E5045',
+          950: '#EFECE4', // Deepest recessed input/bars
+          900: '#F5F2EB', // Primary off-white canvas background
+          850: '#F0ECE4', // Subtle row hover
+          800: '#FFFFFF', // Card surface 1 (crisp white card)
+          750: '#FAF8F5',
+          700: '#F6F3ED', // Card surface 2 (elevated)
+          600: '#D5CDBE', // Accent border
+          500: '#B8AF9E',
         },
         ivory: {
-          50: '#FFFFFF',
-          100: '#FBF9F4',
-          200: '#F3EFE5', // Main text
-          300: '#E7E1D2',
-          400: '#D5CDBE',
+          50: '#11110E',
+          100: '#1F1E1A',
+          200: '#1F1E1A', // Main text: blackish brown!
+          300: '#3D3832',
+          400: '#524B43',
         },
         sage: {
-          300: '#D2DDD2',
-          400: '#B8C7B8',
-          500: '#9DAF9D', // Sage accent / secondary lines
-          600: '#849884',
-          700: '#6A7D6A',
-          muted: '#AEB8AA', // Muted text
+          300: '#3D3832',
+          400: '#524B43',
+          500: '#736E60', // Sage accent / secondary lines
+          600: '#5C584C',
+          700: '#474338',
+          muted: '#6B6659', // Muted blackish-brown secondary text!
         },
         brass: {
-          300: '#DEC49D',
-          400: '#CCA978',
-          500: '#B99561', // Antique brass accent
-          600: '#9E7C4B',
-          700: '#806338',
+          300: '#8C6830',
+          400: '#9E7C4B',
+          500: '#9E7C4B', // Antique brass accent
+          600: '#806338',
+          700: '#664E29',
         },
       },
       fontFamily: {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, User, Building2, Landmark, CheckCircle2, Copy, RotateCcw, Eye, ShieldAlert, Wallet, ExternalLink, Power } from 'lucide-react';
+import { Shield, User, Building2, Landmark, CheckCircle2, Copy, RotateCcw, Eye, ShieldAlert, Sparkles, Wallet, ExternalLink, Power } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
 
 export default function Header({
@@ -44,7 +44,7 @@ export default function Header({
         <div className="flex flex-wrap items-center bg-[#12231C] p-0.5 sm:p-1 rounded border border-[#9DAF9D]/20 order-3 sm:order-2 w-full sm:w-auto justify-center gap-1" aria-label="Role switcher">
           <button
             onClick={() => setActiveRole('patient')}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
+            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
               activeRole === 'patient'
                 ? 'bg-[#192C23] text-[#F3EFE5] font-medium border border-[#B99561]/40 shadow-sm'
                 : 'text-[#AEB8AA] hover:text-[#F3EFE5]'
@@ -56,7 +56,7 @@ export default function Header({
 
           <button
             onClick={() => setActiveRole('hospital')}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
+            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
               activeRole === 'hospital'
                 ? 'bg-[#192C23] text-[#F3EFE5] font-medium border border-[#B99561]/40 shadow-sm'
                 : 'text-[#AEB8AA] hover:text-[#F3EFE5]'
@@ -68,7 +68,7 @@ export default function Header({
 
           <button
             onClick={() => setActiveRole('insurer')}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
+            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
               activeRole === 'insurer'
                 ? 'bg-[#192C23] text-[#F3EFE5] font-medium border border-[#B99561]/40 shadow-sm'
                 : 'text-[#AEB8AA] hover:text-[#F3EFE5]'
@@ -82,7 +82,7 @@ export default function Header({
 
           <button
             onClick={() => setActiveRole('xray')}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
+            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
               activeRole === 'xray'
                 ? 'bg-purple-950/60 text-purple-200 font-medium border border-purple-500/40 shadow-sm'
                 : 'text-purple-400 hover:text-purple-200'
@@ -94,7 +94,7 @@ export default function Header({
 
           <button
             onClick={() => setActiveRole('redteam')}
-            className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
+            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
               activeRole === 'redteam'
                 ? 'bg-rose-950/60 text-rose-200 font-medium border border-rose-500/40 shadow-sm'
                 : 'text-rose-400 hover:text-rose-200'
@@ -183,8 +183,13 @@ export default function Header({
                     <div className="text-[#AEB8AA] text-[11px]">Wallet Address</div>
                     <div className="font-mono text-[11px] text-[#F3EFE5] break-all bg-[#0B1713] p-1.5 rounded border border-[#9DAF9D]/15 flex items-center justify-between">
                       <span>{account.slice(0, 10)}...{account.slice(-6)}</span>
-                      <button onClick={() => copyAddress(account)} className="text-[#B99561] hover:text-[#c9a674]">
-                        {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <button
+                        type="button"
+                        onClick={() => copyAddress(account)}
+                        className="btn-copy text-[#9E7C4B] hover:text-[#7D5825] p-1 flex items-center justify-center transition-all cursor-pointer"
+                        title={copied ? "Copied!" : "Copy address"}
+                      >
+                        {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
                     </div>
                   </div>

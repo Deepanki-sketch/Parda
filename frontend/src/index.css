@@ -4,8 +4,8 @@
 
 @layer base {
   body {
-    background-color: #0B1713;
-    color: #F3EFE5;
+    background-color: #ECE6DA;
+    color: #1F1E1A;
     font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -23,47 +23,232 @@
   }
 }
 
-/* Layered Forest Surfaces */
-.parda-surface {
-  background-color: #12231C;
-  border: 1px solid rgba(157, 175, 157, 0.16);
-  border-radius: 6px;
-}
+/* ========================================================================= */
+/* 3D Tactile Styling & Cursor Hover Reactivity (Big Boxes Only) */
+/* ========================================================================= */
 
+.parda-big-box,
+.parda-surface,
 .parda-surface-elevated {
-  background-color: #192C23;
-  border: 1px solid rgba(157, 175, 157, 0.22);
-  border-radius: 6px;
+  position: relative;
+  z-index: 1;
+  background-color: #F8F4EB !important;
+  border: 1px solid rgba(87, 84, 74, 0.20) !important;
+  border-bottom: 2.5px solid rgba(87, 84, 74, 0.28) !important;
+  border-radius: 14px;
+  box-shadow: 
+    0 1px 2px rgba(31, 30, 26, 0.04),
+    0 4px 12px -2px rgba(31, 30, 26, 0.07),
+    0 16px 32px -4px rgba(31, 30, 26, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease !important;
+  will-change: transform, box-shadow;
 }
 
-/* Subtle, Restrained Dot Matrix (Warm Sage, Sparse) */
+.parda-big-box:hover,
+.parda-surface:hover,
+.parda-surface-elevated:hover {
+  transform: translateY(-4px) !important;
+  border-color: rgba(158, 124, 75, 0.45) !important;
+  border-bottom-color: rgba(158, 124, 75, 0.7) !important;
+  box-shadow: 
+    0 3px 6px rgba(31, 30, 26, 0.04),
+    0 12px 28px -4px rgba(31, 30, 26, 0.10),
+    0 28px 56px -8px rgba(31, 30, 26, 0.13),
+    inset 0 1px 0 #FFFFFF !important;
+}
+
+/* Subtle, Restrained Dot Matrix (Warm Sepia, Sparse) */
 .parda-dot-pattern {
-  background-image: radial-gradient(rgba(157, 175, 157, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(107, 102, 89, 0.1) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
-/* Antique Brass Action Button */
-.btn-brass {
-  background: linear-gradient(110deg, #12231C 10%, #223B30 25%, #12231C 40%);
-  background-size: 200% 100%;
-  border: 1px solid rgba(185, 149, 97, 0.5);
-  color: #F3EFE5;
-  transition: all 0.2s ease;
+/* ========================================================================= */
+/* Transparent Golden Buttons with Golden Brown Text, Stroke & Click Glow   */
+/* ========================================================================= */
+
+button:not(.device-toggle-btn):not(.btn-copy):not(.btn-upload),
+.btn-parda-green,
+.btn-parda-white,
+.btn-brass,
+.btn-pressable:not(.btn-copy):not(.btn-upload) {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(185, 149, 97, 0.10) 100%) !important;
+  background-color: rgba(185, 149, 97, 0.12) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #8C652D !important;
+  border: 1.5px solid rgba(185, 149, 97, 0.55) !important;
+  box-shadow: 0 1px 3px rgba(158, 124, 75, 0.08) !important;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  cursor: pointer;
 }
 
-.btn-brass:hover {
-  border-color: #B99561;
-  background-color: #192C23;
-  box-shadow: 0 4px 16px rgba(185, 149, 97, 0.15);
+button:not(.device-toggle-btn):not(.btn-copy):not(.btn-upload) *,
+.btn-parda-green *,
+.btn-parda-white *,
+.btn-brass *,
+.btn-pressable:not(.btn-copy):not(.btn-upload) * {
+  color: #8C652D !important;
+  stroke: #8C652D !important;
+}
+
+button:not(.device-toggle-btn):not(.btn-copy):not(.btn-upload):hover,
+.btn-parda-green:hover,
+.btn-parda-white:hover,
+.btn-brass:hover,
+.btn-pressable:not(.btn-copy):not(.btn-upload):hover {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.25) 0%, rgba(185, 149, 97, 0.18) 100%) !important;
+  background-color: rgba(185, 149, 97, 0.22) !important;
+  border-color: rgba(185, 149, 97, 0.85) !important;
+  color: #7A5522 !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow: 0 4px 14px rgba(185, 149, 97, 0.22) !important;
+}
+
+button:not(.device-toggle-btn):not(.btn-copy):not(.btn-upload):hover *,
+.btn-parda-white:hover *,
+.btn-parda-green:hover *,
+.btn-brass:hover *,
+.btn-pressable:not(.btn-copy):not(.btn-upload):hover * {
+  color: #7A5522 !important;
+  stroke: #7A5522 !important;
+}
+
+/* Golden brown glow when clicked (active) */
+button:not(.device-toggle-btn):not(.btn-copy):not(.btn-upload):active,
+button:not(.device-toggle-btn):not(.btn-copy):not(.btn-upload):focus-visible,
+.btn-parda-white:active,
+.btn-parda-white:focus-visible,
+.btn-parda-green:active,
+.btn-parda-green:focus-visible,
+.btn-brass:active,
+.btn-brass:focus-visible,
+.btn-pressable:not(.btn-copy):not(.btn-upload):active {
+  background: rgba(185, 149, 97, 0.28) !important;
+  border-color: #B99561 !important;
+  transform: scale(0.98) !important;
+  box-shadow: 
+    0 0 0 3px rgba(185, 149, 97, 0.25),
+    0 0 20px 4px rgba(185, 149, 97, 0.45) !important;
+}
+
+/* ========================================================================= */
+/* Copy Buttons: Box Removed, Bold On Hover, Checkmark on Click              */
+/* ========================================================================= */
+
+.btn-copy,
+button.btn-copy {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 4px !important;
+  border-radius: 4px;
+  color: #9E7C4B !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 120ms ease, color 120ms ease !important;
+}
+
+.btn-copy:hover,
+button.btn-copy:hover {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #7D5825 !important;
+  transform: scale(1.15) !important;
+}
+
+.btn-copy svg,
+button.btn-copy svg {
+  stroke: currentColor !important;
+  stroke-width: 1.8;
+  transition: stroke-width 120ms ease, transform 120ms ease !important;
+}
+
+.btn-copy:hover svg,
+button.btn-copy:hover svg {
+  stroke-width: 2.8 !important;
+}
+
+.btn-copy:active,
+button.btn-copy:active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: scale(0.9) !important;
+}
+
+/* ========================================================================= */
+/* Upload Text Button: No Box, No Stroke, Bold On Cursor Hover               */
+/* ========================================================================= */
+
+.btn-upload,
+button.btn-upload {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: #9E7C4B !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: normal !important;
+  transition: font-weight 120ms ease, color 120ms ease !important;
+}
+
+.btn-upload:hover,
+button.btn-upload:hover {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: #7A5522 !important;
+  font-weight: 800 !important;
+  transform: none !important;
+}
+
+.btn-upload:active,
+button.btn-upload:active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-weight: 800 !important;
+}
+
+/* Device toggle button: no line by default, bottom line (underline) when touched/hovered/active */
+.device-toggle-btn {
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: color 150ms ease, text-decoration 150ms ease;
+}
+
+.device-toggle-btn:hover,
+.device-toggle-btn:active,
+.device-toggle-btn:focus-visible {
+  text-decoration: underline !important;
+  text-underline-offset: 4px;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 1.5px;
 }
 
 /* Redacted Clinical Bars */
 .parda-redacted-bar {
   display: inline-flex;
   align-items: center;
-  background-color: #060E0B;
-  border: 1px solid rgba(157, 175, 157, 0.35);
-  color: transparent;
+  background-color: #EFECE4 !important;
+  border: 1px solid rgba(87, 84, 74, 0.35) !important;
+  color: transparent !important;
   user-select: none;
   padding: 1px 8px;
   border-radius: 3px;
@@ -73,8 +258,8 @@
 }
 
 .parda-redacted-bar:hover, .parda-redacted-bar:focus {
-  background-color: #162820;
-  border-color: #B99561;
+  background-color: #E5E0D5 !important;
+  border-color: #9E7C4B !important;
 }
 
 .parda-popover {
@@ -83,17 +268,17 @@
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background-color: #060E0B;
-  border: 1px solid #B99561;
+  background-color: #FFFFFF !important;
+  border: 1px solid #9E7C4B !important;
   border-radius: 4px;
   padding: 8px 12px;
   z-index: 50;
   width: 280px;
-  color: #F3EFE5;
+  color: #1F1E1A !important;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 11px;
   line-height: 1.45;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 24px rgba(31, 30, 26, 0.15) !important;
   pointer-events: none;
 }
 
@@ -102,32 +287,137 @@
   display: block;
 }
 
-/* Rotating Privacy Veil Keyframes */
-@keyframes spinSlow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* ========================================================================= */
+/* Comprehensive Off-White Canvas & Blackish-Brown Ink Overrides */
+/* ========================================================================= */
+
+body {
+  background-color: #ECE6DA !important;
+  color: #1F1E1A !important;
 }
 
-@keyframes spinReverse {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
+/* Backgrounds: rich deep off-white & warmer cards */
+[class*="bg-[#0B1713]"], [class*="bg-[#030712]"], [class*="bg-[#060E0B]"] {
+  background-color: #ECE6DA !important;
 }
 
-@keyframes pulseGently {
-  0%, 100% { opacity: 0.4; transform: scale(0.98); }
-  50% { opacity: 0.85; transform: scale(1.02); }
+header[class*="bg-[#0B1713]"] {
+  background-color: rgba(236, 230, 218, 0.95) !important;
 }
 
-.animate-spin-slow {
-  animation: spinSlow 32s linear infinite;
+[class*="bg-[#12231C]"], [class*="bg-[#101713]"], [class*="bg-[#0B110E]"] {
+  background-color: #F8F4EB !important;
+  box-shadow: 0 1px 3px rgba(31, 30, 26, 0.05);
 }
 
-.animate-spin-reverse {
-  animation: spinReverse 40s linear infinite;
+[class*="bg-[#192C23]"] {
+  background-color: #F2ECE0 !important;
 }
 
-.animate-pulse-gentle {
-  animation: pulseGently 4s ease-in-out infinite;
+[class*="bg-[#162820]"] {
+  background-color: #ECE5D7 !important;
+}
+
+/* Text colors: Blackish Brown & Muted Dark Sepia */
+[class*="text-[#F3EFE5]"], .text-slate-100 {
+  color: #1F1E1A !important;
+}
+
+.text-white, [class*="text-white"] {
+  color: #FFFFFF !important;
+}
+
+[class*="text-[#AEB8AA]"], [class*="text-[#9DAF9D]"], .text-slate-400, .text-slate-300 {
+  color: #38342C !important;
+}
+
+/* Borders: subtle warm brown hairlines */
+[class*="border-[#9DAF9D]"], [class*="border-white"] {
+  border-color: rgba(87, 84, 74, 0.18) !important;
+}
+
+[class*="border-[#B99561]"] {
+  border-color: rgba(158, 124, 75, 0.45) !important;
+}
+
+/* Interactive Highlight-on-use & Feedback Utilities */
+.card-interactive {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgba(158, 124, 75, 0.65) !important;
+  box-shadow: 0 6px 20px rgba(31, 30, 26, 0.12);
+}
+
+.btn-pressable {
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.btn-pressable:active {
+  transform: scale(0.97);
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px #F5F2EB, 0 0 0 4px #9E7C4B !important;
+}
+
+.parda-selected-item {
+  box-shadow: 0 0 0 2px #9E7C4B, 0 0 18px rgba(158, 124, 75, 0.25) !important;
+}
+
+/* Inputs & Form controls on off-white */
+input, textarea {
+  background-color: #FFFFFF !important;
+  color: #1F1E1A !important;
+  border-color: rgba(87, 84, 74, 0.22) !important;
+}
+
+/* ========================================================================= */
+/* Dropdown Boxes: Golden Brown Sign & 4px Stroke When Clicked               */
+/* ========================================================================= */
+
+select,
+.dropdown-box {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-color: #FFFFFF !important;
+  border: 1.5px solid rgba(158, 124, 75, 0.45) !important;
+  border-radius: 10px !important;
+  color: #1F1E1A !important;
+  cursor: pointer !important;
+  transition: border 120ms ease, box-shadow 150ms ease !important;
+}
+
+select::-ms-expand {
+  display: none !important;
+}
+
+select:hover,
+.dropdown-box:hover {
+  border-color: #9E7C4B !important;
+  background-color: #FAF7F2 !important;
+}
+
+select:focus,
+select:active,
+.dropdown-box:focus,
+.dropdown-box:active {
+  border: 4px solid #9E7C4B !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(158, 124, 75, 0.25), 0 0 16px rgba(158, 124, 75, 0.35) !important;
+}
+
+select option {
+  background-color: #FFFFFF !important;
+  color: #1F1E1A !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: #8C8575 !important;
 }
 
 /* Reduced Motion */
@@ -139,18 +429,97 @@
   }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar for Off-White Canvas */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0B1713;
+  background: #F5F2EB;
 }
 ::-webkit-scrollbar-thumb {
-  background: #192C23;
+  background: #D5CDBE;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B99561;
+  background: #9E7C4B;
 }
+
+/* Direct overrides for Tailwind named utility classes (Insurer, Hospital, etc.) */
+.bg-forest-900, .bg-forest-950 {
+  background-color: #ECE6DA !important;
+}
+
+.bg-forest-900\/90 {
+  background-color: rgba(236, 230, 218, 0.95) !important;
+}
+
+.bg-forest-900\/60 {
+  background-color: rgba(236, 230, 218, 0.75) !important;
+}
+
+.bg-forest-800, .bg-forest-750 {
+  background-color: #F8F4EB !important;
+  box-shadow: 0 1px 3px rgba(31, 30, 26, 0.05);
+}
+
+.bg-forest-700, .bg-forest-850 {
+  background-color: #F2ECE0 !important;
+}
+
+.hover\:bg-forest-850:hover {
+  background-color: #E8E1D3 !important;
+}
+
+/* Bottom page footer & 3-step strip: Pure White Text */
+.parda-bottom-white,
+.parda-bottom-white *,
+footer.parda-bottom-white,
+footer.parda-bottom-white * {
+  color: #FFFFFF !important;
+}
+
+.text-ivory-200, .text-ivory-100, .text-ivory-50 {
+  color: #1F1E1A !important;
+}
+
+.text-sage-muted, .text-sage-300, .text-sage-400 {
+  color: #38342C !important;
+}
+
+.text-sage-500, .text-sage-600 {
+  color: #4A463D !important;
+}
+
+.text-brass-400,
+.text-brass-500,
+.text-brass-300,
+[class*="text-[#B99561]"],
+[class*="text-[#9E7C4B]"],
+[class*="text-[#8C652D]"],
+[class*="text-[#c9a674]"],
+[class*="text-brass"] {
+  color: #9E7C4B !important;
+  font-weight: 700 !important;
+}
+
+.border-sage-500\/20,
+.border-sage-500\/10,
+.border-sage-500\/15,
+.border-sage-500\/25,
+.border-sage-500\/30 {
+  border-color: rgba(87, 84, 74, 0.18) !important;
+}
+
+.border-brass-500\/30,
+.border-brass-500\/20,
+.border-brass-500\/40 {
+  border-color: rgba(158, 124, 75, 0.4) !important;
+}
+
+/* Dedicated Stroke 2 Golden Brown Utility */
+.stroke-2-golden,
+.stroke-4-golden {
+  border: 2px solid #9E7C4B !important;
+}
+

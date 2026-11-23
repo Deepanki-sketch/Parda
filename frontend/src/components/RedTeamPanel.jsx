@@ -114,7 +114,7 @@ export default function RedTeamPanel({ addAuditLog }) {
   return (
     <div className="space-y-8 font-sans text-[#F3EFE5]">
       {/* Banner */}
-      <div className="bg-[#12231C] border border-rose-500/20 rounded-2xl p-6 sm:p-8">
+      <div className="bg-[#12231C] border border-rose-500/20 rounded-2xl p-6 sm:p-8 parda-big-box">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2 text-rose-400 text-xs font-semibold uppercase tracking-wider mb-2">
@@ -154,7 +154,7 @@ export default function RedTeamPanel({ addAuditLog }) {
                 <button
                   onClick={() => handleExecuteAttack(attack)}
                   disabled={isRunning}
-                  className="flex items-center space-x-2 bg-rose-700/80 hover:bg-rose-600 disabled:bg-rose-900/40 text-[#F3EFE5] px-4 py-2 rounded-xl text-xs font-medium transition self-start sm:self-auto shrink-0 border border-rose-500/30 shadow-sm"
+                  className="btn-pressable flex items-center space-x-2 bg-rose-700/80 hover:bg-rose-600 disabled:bg-rose-900/40 text-[#F3EFE5] px-4 py-2 rounded-xl text-xs font-medium transition self-start sm:self-auto shrink-0 border border-rose-500/30 shadow-sm"
                 >
                   {isRunning ? (
                     <>

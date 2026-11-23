@@ -6,12 +6,14 @@ import HospitalPortal from './components/HospitalPortal';
 import InsurerPortal from './components/InsurerPortal';
 import PrivacyXRay from './components/PrivacyXRay';
 import RedTeamPanel from './components/RedTeamPanel';
+import PricingPage from './components/pricing/PricingPage';
 import PatientAuthModal from './components/PatientAuthModal';
 import AddHealthRecordModal from './components/AddHealthRecordModal';
+import InteractiveScrollWave from './components/InteractiveScrollWave';
 import { MOCK_ACCOUNTS, MOCK_PATIENT } from './data/mockData';
 import { getActivePatientSession, setActivePatientSession } from './services/patientAuthService';
 
-const ALLOWED_ROLES = ['patient', 'hospital', 'insurer', 'xray', 'redteam'];
+const ALLOWED_ROLES = ['patient', 'hospital', 'insurer', 'xray', 'redteam', 'pricing'];
 
 export default function App() {
   // 1. Read Role from URI Query String (?role=patient | hospital | insurer | xray | redteam)
@@ -56,6 +58,7 @@ export default function App() {
       else if (e.key === '3') handleRoleChange('insurer');
       else if (e.key === '4') handleRoleChange('xray');
       else if (e.key === '5') handleRoleChange('redteam');
+      else if (e.key === '6' || e.key === 'p' || e.key === 'P') handleRoleChange('pricing');
       else if (e.key === 'Escape') setShowIntro(false);
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -220,7 +223,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-forest-900 text-ivory-200 flex flex-col justify-between selection:bg-brass-500 selection:text-forest-950 font-sans">
+    <div className="min-h-screen bg-[#F5F2EB] text-[#1F1E1A] flex flex-col justify-between selection:bg-[#9E7C4B]/20 selection:text-[#1F1E1A] font-sans relative overflow-x-hidden">
+      
+      {/* Interactive Background Scroll Wave (Behind all cards/boxes) */}
+      <InteractiveScrollWave />
       
       {/* ===================================================================== */}
       {/* 1. DEDICATED FULL-SCREEN PARDA INTERACTIVE INTRO (ON CLEAN LOAD / REPLAY) */}
@@ -242,7 +248,10 @@ export default function App() {
       {/* ===================================================================== */}
       {/* 2. THE WORKING DAPP DASHBOARD */}
       {/* ===================================================================== */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {activeRole === 'pricing' ? (
+        <PricingPage onBackToApp={(role) => handleRoleChange(role || 'patient')} />
+      ) : (
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {/* Active Role or Verification Panel */}
         <section>
           {activeRole === 'patient' && (
@@ -310,6 +319,7 @@ export default function App() {
         </section>
 
       </main>
+      )}
 
       {/* Sovereign Patient Login & Registration Modal */}
       <PatientAuthModal
@@ -330,14 +340,14 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-sage-500/20 bg-forest-950 py-6 text-xs text-sage-muted font-mono">
+      <footer className="border-t border-white/20 bg-transparent py-6 text-xs font-mono relative z-10 parda-bottom-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center space-x-2">
-            <span className="font-bold text-ivory-200 tracking-wide font-serif">PARDA PROTOCOL</span>
-            <span>•</span>
-            <span>BUILT FOR HACK-A-SOL 5.0 (W3-01)</span>
+            <span className="font-bold tracking-wide font-serif text-sm" style={{ color: '#FFFFFF' }}>PARDA PROTOCOL</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>•</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.92)' }}>BUILT FOR HACK-A-SOL 5.0 (W3-01)</span>
           </div>
-          <span className="text-brass-400/90">
+          <span style={{ color: 'rgba(255, 255, 255, 0.88)' }}>
             Circom 2.1 + Groth16 zk-SNARKs + Solidity 0.8.20 + HL7 FHIR R4
           </span>
         </div>
