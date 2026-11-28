@@ -33,6 +33,9 @@ export default function HospitalPortal({
   claimSettled,
   hospitalBalanceEth = 14.20,
   onSettleClaim,
+  onSubmitClaimToInsurer,
+  pendingClaims = [],
+  activeHospitalSession,
   isBreakGlassActive,
   breakGlassReason,
   onTriggerBreakGlass,
@@ -43,7 +46,7 @@ export default function HospitalPortal({
 }) {
   const activePatient = currentPatient || MOCK_PATIENT;
   const [claimAmount, setClaimAmount] = useState('1.5');
-  const [hospitalPayeeAddress, setHospitalPayeeAddress] = useState('');
+  const [hospitalPayeeAddress, setHospitalPayeeAddress] = useState(activeHospitalSession?.address || '');
   const [isProving, setIsProving] = useState(false);
   const [proverStep, setProverStep] = useState(0);
   const [proofGenerated, setProofGenerated] = useState(false);
@@ -120,6 +123,47 @@ export default function HospitalPortal({
         }, stepInterval);
       }, stepInterval);
     }, stepInterval);
+  };
+
+  // Submit ZKP Claim to Insurer (HealthShield Mutual) Queue
+  const handleSubmitClaimToInsurer = () => {
+    const numClaimAmount = parseFloat(claimAmount) || 1.5;
+    const spentNullifier = nullifier || ("0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+
+    let targetPayee = (hospitalPayeeAddress || '').trim();
+    let safePayee = targetPayee && ethers.isAddress(targetPayee)
+      ? targetPayee
+      : (activeHospitalSession?.address || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8');
+
+    const newClaim = {
+      id: `claim-${Date.now()}`,
+      hospitalName: activeHospitalSession?.name || 'St. Jude Medical Center',
+      hospitalLicense: activeHospitalSession?.licenseNo || 'LIC-NY-2024-8849',
+      hospitalAddress: safePayee,
+      amountEth: numClaimAmount,
+      amountInr: Math.round(numClaimAmount * INR_PER_ETH),
+      nullifier: spentNullifier,
+      procedureCode: '99213',
+      procedureName: 'Outpatient Evaluation & Management (20-29 min)',
+      status: 'PENDING_INSURER_SETTLEMENT',
+      submittedAt: new Date().toLocaleTimeString(),
+      merkleRoot: deployedConfig.hospitalMerkleRoot || '0x08581786b454cf726808eca1e5bddfbb948f741cd5ae3d89b6c65f3aeda1da7b',
+    };
+
+    setClaimSubmitted(true);
+
+    if (onSubmitClaimToInsurer) {
+      onSubmitClaimToInsurer(newClaim);
+    }
+
+    if (addAuditLog) {
+      addAuditLog({
+        type: 'CLAIM_SUBMITTED_TO_INSURER',
+        title: `ZKP Claim Transmitted to HealthShield Mutual (${numClaimAmount} ETH)`,
+        detail: `Hospital ${newClaim.hospitalName} submitted Groth16 proof. Nullifier ${spentNullifier.slice(0, 16)}... | Awaiting insurer settlement via MetaMask`,
+        time: new Date().toLocaleTimeString(),
+      });
+    }
   };
 
   // Instant Local Simulation Settlement
@@ -674,29 +718,27 @@ export default function HospitalPortal({
 
                   {!claimSubmitted ? (
                     <div className="space-y-2">
-                      {settlementMode === 'sepolia' ? (
+                      {/* Primary Action: Submit to Insurer */}
+                      <button
+                        type="button"
+                        onClick={handleSubmitClaimToInsurer}
+                        className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
+                      >
+                        <Send className="w-4 h-4 text-brass-400" />
+                        <span>Submit ZKP Claim to Insurer (HealthShield Mutual)</span>
+                      </button>
+
+                      {/* Direct On-Chain Settlement Alternative */}
+                      <div className="pt-1">
                         <button
+                          type="button"
                           onClick={handleOnChainSettlement}
                           disabled={onChainStep === 'generating' || onChainStep === 'broadcasting' || onChainStep === 'mining'}
-                          className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
+                          className="w-full py-2 rounded bg-forest-850 hover:bg-forest-800 border border-sage-500/25 text-sage-muted hover:text-ivory-200 text-[11px] font-mono transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
                         >
-                          <Send className="w-4 h-4 text-brass-400" />
-                          <span>
-                            {onChainStep === 'generating' && "1. Generating ZKP Payload..."}
-                            {onChainStep === 'broadcasting' && "2. Broadcasting to Sepolia via MetaMask..."}
-                            {onChainStep === 'mining' && "3. Mining Block on Sepolia..."}
-                            {(!onChainStep || onChainStep === 'error') && `Submit ${claimAmount} ETH Claim via MetaMask (Sepolia)`}
-                          </span>
+                          <span>Direct Self-Broadcast via MetaMask (Sepolia)</span>
                         </button>
-                      ) : (
-                        <button
-                          onClick={executeInstantSimulation}
-                          className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer"
-                        >
-                          <Send className="w-4 h-4 text-brass-400" />
-                          <span>Submit Proof (Instant Demo Simulation)</span>
-                        </button>
-                      )}
+                      </div>
 
                       {/* Fail-safe Error Fallback Option */}
                       {onChainStep === 'error' && (
@@ -714,10 +756,33 @@ export default function HospitalPortal({
                         </div>
                       )}
                     </div>
+                  ) : !claimSettled ? (
+                    /* Awaiting Insurer Settlement Banner */
+                    <div className="space-y-3 font-mono">
+                      <div className="bg-amber-950/70 border border-amber-500/40 rounded-xl p-4 text-center space-y-2 text-xs">
+                        <div className="text-amber-300 font-bold flex items-center justify-center space-x-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                          <span>ZKP CLAIM TRANSMITTED TO INSURER!</span>
+                        </div>
+                        <div className="text-sage-muted text-[11px]">
+                          Claim of {claimAmount} ETH (₹{claimInr.toLocaleString('en-IN')}) with Groth16 proof is waiting in HealthShield Mutual's queue.
+                        </div>
+                        <div className="text-[10px] text-amber-400/90 pt-1 border-t border-amber-500/20">
+                          💡 Log into the <span className="font-bold underline cursor-pointer" onClick={() => setActiveRole && setActiveRole('insurer')}>Insurer Portal</span> to approve and trigger MetaMask settlement.
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={executeInstantSimulation}
+                        className="w-full py-2 rounded bg-forest-850 hover:bg-forest-800 border border-sage-500/30 text-sage-muted hover:text-ivory-200 text-xs font-mono transition-colors cursor-pointer"
+                      >
+                        ⚡ Simulate Instant Insurer Approval (Demo)
+                      </button>
+                    </div>
                   ) : (
                     /* Breakthrough Success Banner + Sequential Claim Reset Button */
                     <div className="space-y-3">
-                      <div className="bg-emerald-950/70 rounded p-4 text-center space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
+                      <div className="bg-emerald-950/70 rounded-xl p-4 text-center space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                         <div className="text-emerald-300 font-bold flex items-center justify-center space-x-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                           <span>CLAIM SETTLED ON-CHAIN!</span>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
+import RoleGateway from './components/RoleGateway';
 import PardaOpeningSequence from './components/PardaOpeningSequence';
 import PatientPortal from './components/PatientPortal';
 import HospitalPortal from './components/HospitalPortal';
@@ -10,22 +11,46 @@ import PricingPage from './components/pricing/PricingPage';
 import PatientAuthModal from './components/PatientAuthModal';
 import AddHealthRecordModal from './components/AddHealthRecordModal';
 import InteractiveScrollWave from './components/InteractiveScrollWave';
-import { MOCK_ACCOUNTS, MOCK_PATIENT } from './data/mockData';
+import { MOCK_ACCOUNTS, MOCK_PATIENT, MOCK_HOSPITALS } from './data/mockData';
 import { getActivePatientSession, setActivePatientSession } from './services/patientAuthService';
+import {
+  getActiveRoleSession,
+  setActiveRoleSession,
+  clearActiveRoleSession,
+  getPendingClaims,
+  addPendingClaim,
+  removePendingClaim,
+  getSettledClaims,
+  addSettledClaim,
+  getHospitalBalanceEth,
+  setHospitalBalanceEth,
+  getPoolBalanceEth,
+  setPoolBalanceEth,
+  getStoredDoctorAccessGranted,
+  setStoredDoctorAccessGranted,
+  getSelectedDelegatedHospital,
+  setSelectedDelegatedHospital,
+} from './services/authService';
 
-const ALLOWED_ROLES = ['patient', 'hospital', 'insurer', 'xray', 'redteam', 'pricing'];
+const ALLOWED_ROLES = ['gateway', 'patient', 'hospital', 'insurer', 'xray', 'redteam', 'pricing'];
 
 export default function App() {
-  // 1. Read Role from URI Query String (?role=patient | hospital | insurer | xray | redteam)
+  // 1. Sovereign Session State (Role + User Identity)
+  const [activeRoleSession, setActiveRoleSessionState] = useState(() => getActiveRoleSession());
+
+  // 2. Read Role from URI Query String (?role=gateway | patient | hospital | insurer | xray | redteam | pricing)
   const [activeRole, setActiveRoleState] = useState(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search).get('role');
-      if (ALLOWED_ROLES.includes(p)) return p;
+      if (['xray', 'redteam', 'pricing'].includes(p)) return p;
+      if (['patient', 'hospital', 'insurer'].includes(p)) return p;
     }
-    return 'patient';
+    const saved = getActiveRoleSession();
+    if (saved?.role) return saved.role;
+    return 'gateway';
   });
 
-  // 2. Synchronize Role changes to the Browser URI (?role=...)
+  // 3. Synchronize Role changes to Browser URI (?role=...)
   const handleRoleChange = (role) => {
     if (ALLOWED_ROLES.includes(role)) {
       setActiveRoleState(role);
@@ -37,7 +62,40 @@ export default function App() {
     }
   };
 
-  // 3. Listen to browser back/forward buttons (popstate)
+  // 4. Role Selection from Gateway or 1-Click Persona Logins
+  const handleSelectRole = (role, userObject) => {
+    const session = {
+      role,
+      user: userObject,
+      authenticatedAt: new Date().toISOString(),
+    };
+    setActiveRoleSessionState(session);
+    setActiveRoleSession(session);
+    handleRoleChange(role);
+
+    addAuditLog({
+      type: 'ROLE_AUTHENTICATED',
+      title: `Authenticated as ${role.toUpperCase()}: ${userObject.name || userObject.id}`,
+      detail: `Scoped execution environment loaded. Address: ${userObject.address || 'N/A'} | Cryptographic isolation active`,
+      time: new Date().toLocaleTimeString(),
+    });
+  };
+
+  // 5. Explicit Logout / Switch Persona
+  const handleLogout = () => {
+    clearActiveRoleSession();
+    setActiveRoleSessionState(null);
+    handleRoleChange('gateway');
+
+    addAuditLog({
+      type: 'LOGOUT',
+      title: 'Active Session Terminated',
+      detail: 'Sovereign keys and unencrypted credentials flushed from memory. Returned to Portal Gateway.',
+      time: new Date().toLocaleTimeString(),
+    });
+  };
+
+  // 6. Listen to browser popstate (back/forward)
   useEffect(() => {
     const handlePopState = () => {
       const p = new URLSearchParams(window.location.search).get('role');
@@ -49,71 +107,96 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // 4. Keyboard Shortcuts: Keys 1..5 switch roles, Esc dismisses intro
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
-      if (e.key === '1') handleRoleChange('patient');
-      else if (e.key === '2') handleRoleChange('hospital');
-      else if (e.key === '3') handleRoleChange('insurer');
-      else if (e.key === '4') handleRoleChange('xray');
-      else if (e.key === '5') handleRoleChange('redteam');
-      else if (e.key === '6' || e.key === 'p' || e.key === 'P') handleRoleChange('pricing');
-      else if (e.key === 'Escape') setShowIntro(false);
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Dedicated full-screen interactive Parda intro control (?intro=1)
+  // 7. Full-screen interactive intro sequence (?intro=1)
   const [showIntro, setShowIntro] = useState(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search).get('intro');
       if (p === '1') return true;
       if (p === '0') return false;
-      return !sessionStorage.getItem('parda_intro_seen_v4');
+      return !sessionStorage.getItem('parda_intro_seen_v5');
     }
     return false;
   });
 
   const handleIntroComplete = () => {
     if (typeof window !== 'undefined') {
-      sessionStorage.setItem('parda_intro_seen_v4', 'true');
+      sessionStorage.setItem('parda_intro_seen_v5', 'true');
     }
     setShowIntro(false);
   };
   
-  // Shared Workflow State
+  // =========================================================================
+  // Persistent Workflow State (Synced across Patient, Hospital, and Insurer)
+  // =========================================================================
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [ipfsCid, setIpfsCid] = useState('bafybeic23ae33cd09cec6723c0b92cb16438072');
-  const [doctorAccessGranted, setDoctorAccessGranted] = useState(false);
+  
+  // Sovereign Patient DEK Access Grant
+  const [doctorAccessGranted, setDoctorAccessGrantedState] = useState(() => getStoredDoctorAccessGranted());
+  const handleSetDoctorAccessGranted = (val) => {
+    setDoctorAccessGrantedState(val);
+    setStoredDoctorAccessGranted(val);
+  };
+
   const [claimSettled, setClaimSettled] = useState(false);
   
-  // Dynamic Balances and Escrow Pools (Standard rate: 1 ETH = 10,000 INR)
-  const [hospitalBalanceEth, setHospitalBalanceEth] = useState(14.20);
-  const [poolBalanceEth, setPoolBalanceEth] = useState(10.00);
+  // Dynamic Balances (1 ETH = 10,000 INR)
+  const [hospitalBalanceEth, setHospitalBalanceEthState] = useState(() => getHospitalBalanceEth());
+  const [poolBalanceEth, setPoolBalanceEthState] = useState(() => getPoolBalanceEth());
 
-  // Dynamic Claims Ledger
-  const [settledClaims, setSettledClaims] = useState([
-    {
-      id: 'tx-hist-001',
-      nullifier: '0x7c81412089400ae9812739482019482019482019f3',
-      hospitalName: 'Metropolitan General Hospital',
-      payee: '0x15d3...6A65 (Metropolitan)',
-      amountEth: 2.80,
-      amountInr: 28000,
-      status: 'VERIFIED VALID',
-      timestamp: '11:30:00 AM',
-      isReplayBlocked: false,
-    }
-  ]);
+  // Claims Management (Pending Queue & Settled Ledger)
+  const [pendingClaims, setPendingClaims] = useState(() => getPendingClaims());
+  const [settledClaims, setSettledClaims] = useState(() => getSettledClaims());
 
   const totalSettledEth = settledClaims.reduce(
-    (acc, c) => acc + (c.isReplayBlocked ? 0 : c.amountEth),
+    (acc, c) => acc + (c.isReplayBlocked ? 0 : (parseFloat(c.amountEth) || 0)),
     0
   );
 
-  // Sovereign Emergency Break-Glass (Persistent across tab navigation)
+  // Hospital Submits ZKP Claim to Insurer Queue
+  const handleSubmitClaimToInsurer = (claim) => {
+    const updated = addPendingClaim(claim);
+    setPendingClaims(updated);
+  };
+
+  // Insurer Accepts and Settles Claim via MetaMask
+  const handleAcceptAndSettleClaim = (settledData) => {
+    const numAmount = parseFloat(settledData.amountEth) || 1.5;
+    const inrAmount = Math.round(numAmount * 10000);
+    
+    // 1. Update balances
+    const newHospBal = parseFloat((hospitalBalanceEth + numAmount).toFixed(4));
+    const newPoolBal = parseFloat((Math.max(0, poolBalanceEth - numAmount)).toFixed(4));
+    setHospitalBalanceEthState(newHospBal);
+    setHospitalBalanceEth(newHospBal);
+    setPoolBalanceEthState(newPoolBal);
+    setPoolBalanceEth(newPoolBal);
+    
+    // 2. Remove from pending queue
+    const updatedPending = removePendingClaim(settledData.id);
+    setPendingClaims(updatedPending);
+
+    // 3. Record in settled ledger
+    const newClaim = {
+      id: settledData.id || `claim-${Date.now()}`,
+      nullifier: settledData.nullifier || ('0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('')),
+      hospitalName: settledData.hospitalName || 'St. Jude Medical Center',
+      payee: settledData.hospitalAddress || settledData.payee || '0x7099...79C8 (St. Jude)',
+      amountEth: numAmount,
+      amountInr: inrAmount,
+      status: 'VERIFIED VALID',
+      timestamp: new Date().toLocaleTimeString(),
+      isReplayBlocked: false,
+      txHash: settledData.txHash || '',
+    };
+    
+    const updatedSettled = addSettledClaim(newClaim);
+    setSettledClaims(updatedSettled);
+    setClaimSettled(true);
+    return newClaim;
+  };
+
+  // Sovereign Emergency Trauma Break-Glass
   const [isBreakGlassActive, setIsBreakGlassActive] = useState(false);
   const [breakGlassReason, setBreakGlassReason] = useState(
     "Patient unconscious after severe acute trauma - emergency allergy and blood type check"
@@ -140,38 +223,12 @@ export default function App() {
     });
   };
 
-  // Autonomous Smart Contract Settlement Engine
-  const handleSettleClaim = ({ amountEth, nullifier, hospitalName, payee, txHash }) => {
-    const numAmount = parseFloat(amountEth) || 1.5;
-    const inrAmount = Math.round(numAmount * 10000);
-    
-    setHospitalBalanceEth(prev => parseFloat((prev + numAmount).toFixed(4)));
-    setPoolBalanceEth(prev => parseFloat((Math.max(0, prev - numAmount)).toFixed(4)));
-    
-    const newClaim = {
-      id: `claim-${Date.now()}`,
-      nullifier: nullifier || ('0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('')),
-      hospitalName: hospitalName || 'St. Jude Medical Center',
-      payee: payee || '0x7099...79C8 (St. Jude)',
-      amountEth: numAmount,
-      amountInr: inrAmount,
-      status: 'VERIFIED VALID',
-      timestamp: new Date().toLocaleTimeString(),
-      isReplayBlocked: false,
-      txHash: txHash || '',
-    };
-    
-    setSettledClaims(prev => [newClaim, ...prev]);
-    setClaimSettled(true);
-    return newClaim;
-  };
-
-  // Audit Log State
+  // Live Audit Log Trail
   const [auditLogs, setAuditLogs] = useState([
     {
       type: 'INIT',
-      title: 'Insurance Pool Initialized',
-      detail: 'Liquidity funded with 10.0 ETH | Approved Hospital Merkle Root Set',
+      title: 'HealthShield Underwriting Escrow Solvency Anchored',
+      detail: 'Liquidity funded with 10.0 ETH | Approved Hospital Merkle Root Set (0x0858...da7b)',
       time: '04:00:00 AM',
     },
     {
@@ -186,7 +243,7 @@ export default function App() {
     setAuditLogs((prev) => [log, ...prev]);
   };
 
-  // Sovereign Patient Session State
+  // Patient Modal Controls
   const [currentPatient, setCurrentPatient] = useState(() => getActivePatientSession());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login');
@@ -200,12 +257,7 @@ export default function App() {
   const handleAuthSuccess = (patient) => {
     setCurrentPatient(patient);
     setActivePatientSession(patient);
-    addAuditLog({
-      type: 'PATIENT_AUTHENTICATED',
-      title: `Patient Session: ${patient.name}`,
-      detail: `Authenticated sovereign vault for ${patient.name} (${patient.abhaId || patient.id}) | Key active in memory`,
-      time: new Date().toLocaleTimeString(),
-    });
+    handleSelectRole('patient', patient);
   };
 
   const handleRecordUpdated = (updatedPatient) => {
@@ -225,101 +277,122 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] text-[#1F1E1A] flex flex-col justify-between selection:bg-[#9E7C4B]/20 selection:text-[#1F1E1A] font-sans relative overflow-x-hidden">
       
-      {/* Interactive Background Scroll Wave (Behind all cards/boxes) */}
+      {/* Interactive Background Scroll Wave */}
       <InteractiveScrollWave />
       
-      {/* ===================================================================== */}
-      {/* 1. DEDICATED FULL-SCREEN PARDA INTERACTIVE INTRO (ON CLEAN LOAD / REPLAY) */}
-      {/* ===================================================================== */}
+      {/* Full-Screen Interactive Parda Intro (on first load or replay) */}
       {showIntro && (
         <PardaOpeningSequence onComplete={handleIntroComplete} />
       )}
 
-      {/* Top Header Navigation with URI-Linked Tabs */}
+      {/* Top Header with Role Identity Badge & MetaMask Sepolia Control */}
       <Header
         activeRole={activeRole}
         setActiveRole={handleRoleChange}
-        currentAccount={currentAccount}
+        activeRoleSession={activeRoleSession}
+        onLogout={handleLogout}
         onReplayIntro={() => setShowIntro(true)}
         currentPatient={currentPatient}
         onOpenAuthModal={handleOpenAuthModal}
+        pendingClaimsCount={pendingClaims.length}
       />
 
       {/* ===================================================================== */}
-      {/* 2. THE WORKING DAPP DASHBOARD */}
+      {/* MAIN VIEWPORT: GATEWAY OR DEDICATED ROLE PORTAL                       */}
       {/* ===================================================================== */}
-      {activeRole === 'pricing' ? (
-        <PricingPage onBackToApp={(role) => handleRoleChange(role || 'patient')} />
-      ) : (
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-        {/* Active Role or Verification Panel */}
-        <section>
-          {activeRole === 'patient' && (
-            <PatientPortal
-              isEncrypted={isEncrypted}
-              setIsEncrypted={setIsEncrypted}
-              ipfsCid={ipfsCid}
-              setIpfsCid={setIpfsCid}
-              doctorAccessGranted={doctorAccessGranted}
-              setDoctorAccessGranted={setDoctorAccessGranted}
-              claimSettled={claimSettled}
-              settledClaims={settledClaims}
-              isBreakGlassActive={isBreakGlassActive}
-              breakGlassReason={breakGlassReason}
-              onRevokeBreakGlass={handleRevokeBreakGlass}
-              addAuditLog={addAuditLog}
-              setActiveRole={handleRoleChange}
-              currentPatient={currentPatient}
-              onOpenAuthModal={handleOpenAuthModal}
-              onOpenAddRecordModal={() => setIsAddRecordModalOpen(true)}
-            />
-          )}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+        
+        {/* 1. PORTAL GATEWAY: If user hasn't selected a role or logged out */}
+        {(activeRole === 'gateway' || !activeRoleSession) && !['xray', 'redteam', 'pricing'].includes(activeRole) && (
+          <RoleGateway
+            onSelectRole={handleSelectRole}
+            onOpenPatientAuthModal={handleOpenAuthModal}
+            onViewXRay={() => handleRoleChange('xray')}
+            onViewRedTeam={() => handleRoleChange('redteam')}
+            onViewPricing={() => handleRoleChange('pricing')}
+            pendingClaimsCount={pendingClaims.length}
+          />
+        )}
 
-          {activeRole === 'hospital' && (
-            <HospitalPortal
-              doctorAccessGranted={doctorAccessGranted}
-              claimSettled={claimSettled}
-              hospitalBalanceEth={hospitalBalanceEth}
-              onSettleClaim={handleSettleClaim}
-              isBreakGlassActive={isBreakGlassActive}
-              breakGlassReason={breakGlassReason}
-              onTriggerBreakGlass={handleTriggerBreakGlass}
-              onRevokeBreakGlass={handleRevokeBreakGlass}
-              addAuditLog={addAuditLog}
-              setActiveRole={handleRoleChange}
-              currentPatient={currentPatient}
-            />
-          )}
+        {/* 2. DEDICATED PATIENT PORTAL: Only rendered when logged in as Patient */}
+        {activeRole === 'patient' && activeRoleSession?.role === 'patient' && (
+          <PatientPortal
+            isEncrypted={isEncrypted}
+            setIsEncrypted={setIsEncrypted}
+            ipfsCid={ipfsCid}
+            setIpfsCid={setIpfsCid}
+            doctorAccessGranted={doctorAccessGranted}
+            setDoctorAccessGranted={handleSetDoctorAccessGranted}
+            claimSettled={claimSettled}
+            settledClaims={settledClaims}
+            isBreakGlassActive={isBreakGlassActive}
+            breakGlassReason={breakGlassReason}
+            onRevokeBreakGlass={handleRevokeBreakGlass}
+            addAuditLog={addAuditLog}
+            setActiveRole={handleRoleChange}
+            currentPatient={currentPatient}
+            onOpenAuthModal={handleOpenAuthModal}
+            onOpenAddRecordModal={() => setIsAddRecordModalOpen(true)}
+          />
+        )}
 
-          {activeRole === 'insurer' && (
-            <InsurerPortal
-              claimSettled={claimSettled}
-              poolBalanceEth={poolBalanceEth}
-              totalSettledEth={totalSettledEth}
-              settledClaims={settledClaims}
-              auditLogs={auditLogs}
-              addAuditLog={addAuditLog}
-            />
-          )}
+        {/* 3. DEDICATED HOSPITAL PORTAL: Only rendered when logged in as Hospital */}
+        {activeRole === 'hospital' && activeRoleSession?.role === 'hospital' && (
+          <HospitalPortal
+            doctorAccessGranted={doctorAccessGranted}
+            claimSettled={claimSettled}
+            hospitalBalanceEth={hospitalBalanceEth}
+            onSettleClaim={handleAcceptAndSettleClaim}
+            onSubmitClaimToInsurer={handleSubmitClaimToInsurer}
+            pendingClaims={pendingClaims}
+            activeHospitalSession={activeRoleSession.user}
+            isBreakGlassActive={isBreakGlassActive}
+            breakGlassReason={breakGlassReason}
+            onTriggerBreakGlass={handleTriggerBreakGlass}
+            onRevokeBreakGlass={handleRevokeBreakGlass}
+            addAuditLog={addAuditLog}
+            setActiveRole={handleRoleChange}
+            currentPatient={currentPatient}
+          />
+        )}
 
-          {activeRole === 'xray' && (
-            <PrivacyXRay
-              claimSettled={claimSettled}
-              settledClaims={settledClaims}
-              latestClaim={settledClaims[0]}
-              isBreakGlassActive={isBreakGlassActive}
-            />
-          )}
+        {/* 4. DEDICATED INSURER PORTAL: Only rendered when logged in as Insurer */}
+        {activeRole === 'insurer' && activeRoleSession?.role === 'insurer' && (
+          <InsurerPortal
+            claimSettled={claimSettled}
+            poolBalanceEth={poolBalanceEth}
+            totalSettledEth={totalSettledEth}
+            settledClaims={settledClaims}
+            pendingClaims={pendingClaims}
+            onAcceptAndSettleClaim={handleAcceptAndSettleClaim}
+            auditLogs={auditLogs}
+            addAuditLog={addAuditLog}
+          />
+        )}
 
-          {activeRole === 'redteam' && (
-            <RedTeamPanel
-              addAuditLog={addAuditLog}
-            />
-          )}
-        </section>
+        {/* 5. PRIVACY X-RAY: Zero-Knowledge 3-Column Transparency Inspector */}
+        {activeRole === 'xray' && (
+          <PrivacyXRay
+            claimSettled={claimSettled}
+            settledClaims={settledClaims}
+            latestClaim={settledClaims[0]}
+            isBreakGlassActive={isBreakGlassActive}
+          />
+        )}
+
+        {/* 6. RED-TEAM ADVERSARIAL SIMULATOR: 7 Attack Vectors */}
+        {activeRole === 'redteam' && (
+          <RedTeamPanel
+            addAuditLog={addAuditLog}
+          />
+        )}
+
+        {/* 7. PRICING & TIERS */}
+        {activeRole === 'pricing' && (
+          <PricingPage onBackToApp={(role) => handleRoleChange(role || (activeRoleSession ? activeRoleSession.role : 'gateway'))} />
+        )}
 
       </main>
-      )}
 
       {/* Sovereign Patient Login & Registration Modal */}
       <PatientAuthModal
@@ -345,10 +418,10 @@ export default function App() {
           <div className="flex items-center space-x-2">
             <span className="font-bold tracking-wide font-serif text-sm" style={{ color: '#FFFFFF' }}>PARDA PROTOCOL</span>
             <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>•</span>
-            <span style={{ color: 'rgba(255, 255, 255, 0.92)' }}>BUILT FOR HACK-A-SOL 5.0 (W3-01)</span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.92)' }}>ZKP HEALTH RECORDS & AUTONOMOUS SETTLEMENT</span>
           </div>
           <span style={{ color: 'rgba(255, 255, 255, 0.88)' }}>
-            Circom 2.1 + Groth16 zk-SNARKs + Solidity 0.8.20 + HL7 FHIR R4
+            Circom 2.1 Groth16 + Solidity 0.8.20 + HL7 FHIR R4
           </span>
         </div>
       </footer>
