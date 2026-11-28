@@ -57,14 +57,15 @@ export default function HospitalPortal({
 
   // On-Chain vs Instant Mode Toggle
   const [settlementMode, setSettlementMode] = useState('sepolia'); // 'sepolia' | 'simulation'
-  const [onChainStep, setOnChainStep] = useState(''); // 'generating' | 'broadcasting' | 'mining' | 'settled' | 'error'
+  const [onChainStep, setOnChainStep] = useState(''); // 'generating' | 'broadcasting' | 'mining' | 'settled' | 'transmitted' | 'error'
   const [txHash, setTxHash] = useState('');
   const [onChainError, setOnChainError] = useState('');
 
-  // Derive settlement status from incoming claims ledger or local state
-  const latestSettledClaim = settledClaims[0];
-  const isSettledOnChain = claimSettled || (latestSettledClaim && latestSettledClaim.amountEth > 0);
-  const activeTxHash = txHash || latestSettledClaim?.txHash || '';
+  // Settlement status for THIS active claim submission
+  const isSettledOnChain = Boolean(txHash) && onChainStep === 'settled';
+  const isSimulatedSettled = onChainStep === 'settled' && !txHash;
+  const isThisClaimSettled = isSettledOnChain || isSimulatedSettled;
+  const activeTxHash = txHash || '';
 
   // Emergency Trauma Break-Glass Modal State
   const [showBreakGlassModal, setShowBreakGlassModal] = useState(false);
@@ -157,6 +158,7 @@ export default function HospitalPortal({
     };
 
     setClaimSubmitted(true);
+    setOnChainStep('transmitted');
 
     if (onSubmitClaimToInsurer) {
       onSubmitClaimToInsurer(newClaim);
@@ -724,25 +726,30 @@ export default function HospitalPortal({
 
                   {!claimSubmitted ? (
                     <div className="space-y-2">
-                      {/* Primary Action: Submit to Insurer */}
+                      {/* Primary Action: Direct On-Chain Settlement via MetaMask */}
                       <button
                         type="button"
-                        onClick={handleSubmitClaimToInsurer}
+                        onClick={handleOnChainSettlement}
+                        disabled={onChainStep === 'generating' || onChainStep === 'broadcasting' || onChainStep === 'mining'}
                         className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
                       >
                         <Send className="w-4 h-4 text-brass-400" />
-                        <span>Submit ZKP Claim to Insurer (HealthShield Mutual)</span>
+                        <span>
+                          {onChainStep === 'generating' && "1. Generating ZKP Payload..."}
+                          {onChainStep === 'broadcasting' && "2. Broadcasting to Sepolia via MetaMask..."}
+                          {onChainStep === 'mining' && "3. Mining Block on Sepolia..."}
+                          {(!onChainStep || onChainStep === 'error') && `Submit ${claimAmount} ETH Claim via MetaMask (Sepolia)`}
+                        </span>
                       </button>
 
-                      {/* Direct On-Chain Settlement Alternative */}
+                      {/* Forward to Insurer Approval Queue option */}
                       <div className="pt-1">
                         <button
                           type="button"
-                          onClick={handleOnChainSettlement}
-                          disabled={onChainStep === 'generating' || onChainStep === 'broadcasting' || onChainStep === 'mining'}
+                          onClick={handleSubmitClaimToInsurer}
                           className="w-full py-2 rounded bg-forest-850 hover:bg-forest-800 border border-sage-500/25 text-sage-muted hover:text-ivory-200 text-[11px] font-mono transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
                         >
-                          <span>Direct Self-Broadcast via MetaMask (Sepolia)</span>
+                          <span>Or Forward ZKP to Insurer Approval Queue (HealthShield)</span>
                         </button>
                       </div>
 
@@ -762,7 +769,7 @@ export default function HospitalPortal({
                         </div>
                       )}
                     </div>
-                  ) : !isSettledOnChain ? (
+                  ) : onChainStep === 'transmitted' ? (
                     /* Awaiting Insurer Settlement Banner */
                     <div className="space-y-3 font-mono">
                       <div className="bg-amber-950/70 border border-amber-500/40 rounded-xl p-4 text-center space-y-2 text-xs">
@@ -784,6 +791,14 @@ export default function HospitalPortal({
                       >
                         ⚡ Simulate Instant Insurer Approval (Demo)
                       </button>
+
+                      <button
+                        onClick={handleResetClaimForm}
+                        className="w-full flex items-center justify-center space-x-2 bg-forest-850 hover:bg-forest-800 border border-brass-500/40 text-brass-300 hover:text-ivory-200 font-mono text-xs font-medium py-2 rounded transition-all cursor-pointer shadow-sm"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-brass-400" />
+                        <span>Submit Another Claim</span>
+                      </button>
                     </div>
                   ) : (
                     /* Breakthrough Success Banner + Sequential Claim Reset Button */
@@ -794,7 +809,7 @@ export default function HospitalPortal({
                           <span>CLAIM SETTLED ON-CHAIN!</span>
                         </div>
                         <div className="text-[#AEB8AA] text-[11px]">
-                          Payout of {latestSettledClaim?.amountEth || claimAmount} ETH (₹{((parseFloat(latestSettledClaim?.amountEth) || parseFloat(claimAmount)) * INR_PER_ETH).toLocaleString('en-IN')}) autonomously released to Hospital Treasury.
+                          Payout of {claimAmount} ETH (₹{(parseFloat(claimAmount) * INR_PER_ETH).toLocaleString('en-IN')}) autonomously released to Hospital Treasury.
                         </div>
 
                         {activeTxHash && (
