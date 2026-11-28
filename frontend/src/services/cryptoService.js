@@ -9,6 +9,8 @@
  * - Zero plaintext ever leaves the patient's browser
  */
 
+const webCrypto = typeof globalThis !== 'undefined' && globalThis.crypto ? globalThis.crypto : window.crypto;
+
 // Convert ArrayBuffer to Base64
 export function bufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
@@ -16,12 +18,12 @@ export function bufferToBase64(buffer) {
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return window.btoa(binary);
+  return globalThis.btoa(binary);
 }
 
 // Convert Base64 to ArrayBuffer
 export function base64ToBuffer(base64) {
-  const binary = window.atob(base64);
+  const binary = globalThis.atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
@@ -40,7 +42,7 @@ export function bufferToHex(buffer) {
  * @returns {Promise<CryptoKey>}
  */
 export async function generatePatientKey() {
-  return await window.crypto.subtle.generateKey(
+  return await webCrypto.subtle.generateKey(
     {
       name: 'AES-GCM',
       length: 256,
@@ -56,7 +58,7 @@ export async function generatePatientKey() {
  * @returns {Promise<string>}
  */
 export async function exportKeyToBase64(key) {
-  const exported = await window.crypto.subtle.exportKey('raw', key);
+  const exported = await webCrypto.subtle.exportKey('raw', key);
   return bufferToBase64(exported);
 }
 
@@ -67,7 +69,7 @@ export async function exportKeyToBase64(key) {
  */
 export async function importKeyFromBase64(base64Key) {
   const rawBuffer = base64ToBuffer(base64Key);
-  return await window.crypto.subtle.importKey(
+  return await webCrypto.subtle.importKey(
     'raw',
     rawBuffer,
     {
@@ -88,7 +90,7 @@ export async function computeSha256(data) {
   const jsonStr = typeof data === 'string' ? data : JSON.stringify(data);
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(jsonStr);
-  const hashBuffer = await window.crypto.subtle.digest('SHA-256', dataBuffer);
+  const hashBuffer = await webCrypto.subtle.digest('SHA-256', dataBuffer);
   return bufferToHex(hashBuffer);
 }
 
@@ -106,13 +108,13 @@ export async function encryptHealthRecord(data, key) {
   const plaintextBytes = encoder.encode(jsonStr);
 
   // 96-bit cryptographically random IV for GCM
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const iv = webCrypto.getRandomValues(new Uint8Array(12));
 
   // Compute on-chain integrity anchor hash before encryption
   const recordHash = await computeSha256(jsonStr);
 
   // AES-GCM authenticated encryption
-  const encryptedBuffer = await window.crypto.subtle.encrypt(
+  const encryptedBuffer = await webCrypto.subtle.encrypt(
     {
       name: 'AES-GCM',
       iv: iv,
@@ -141,7 +143,7 @@ export async function decryptHealthRecord(ciphertextBase64, ivBase64, key) {
   const ciphertextBuffer = base64ToBuffer(ciphertextBase64);
   const ivBuffer = base64ToBuffer(ivBase64);
 
-  const decryptedBuffer = await window.crypto.subtle.decrypt(
+  const decryptedBuffer = await webCrypto.subtle.decrypt(
     {
       name: 'AES-GCM',
       iv: new Uint8Array(ivBuffer),
@@ -154,4 +156,150 @@ export async function decryptHealthRecord(ciphertextBase64, ivBase64, key) {
   const decoder = new TextDecoder();
   const jsonStr = decoder.decode(decryptedBuffer);
   return JSON.parse(jsonStr);
+}
+
+const DEK_WRAP_INFO = new TextEncoder().encode('PARDA-DEK-WRAP-V1');
+
+/**
+ * Wraps the patient's 256-bit AES-GCM Data Encryption Key (DEK) for a target grantee
+ * using ephemeral ECDH P-256 + HKDF-SHA256 + AES-256-GCM key wrapping.
+ * Safe to store in Supabase or transmit over pub/sub without revealing the raw DEK.
+ *
+ * @param {string} base64AesKey - Raw 256-bit patient AES key in Base64
+ * @param {object} recipientEcdhPublicJwk - Recipient hospital ECDH P-256 public JWK
+ * @returns {Promise<object>} Wrapped key bundle (ephemeralPublicKey, wrapIvBase64, wrappedDekBase64, alg)
+ */
+export async function wrapPatientKeyForGrantee(base64AesKey, recipientEcdhPublicJwk) {
+  const dekRaw = base64ToBuffer(base64AesKey);
+
+  const recipientPubKey = await webCrypto.subtle.importKey(
+    'jwk',
+    recipientEcdhPublicJwk,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+
+  const ephemeralPair = await webCrypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits']
+  );
+
+  const sharedBits = await webCrypto.subtle.deriveBits(
+    { name: 'ECDH', public: recipientPubKey },
+    ephemeralPair.privateKey,
+    256
+  );
+
+  const hkdfBaseKey = await webCrypto.subtle.importKey(
+    'raw',
+    sharedBits,
+    'HKDF',
+    false,
+    ['deriveKey']
+  );
+
+  const wrapKey = await webCrypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(32),
+      info: DEK_WRAP_INFO,
+    },
+    hkdfBaseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt']
+  );
+
+  const wrapIv = webCrypto.getRandomValues(new Uint8Array(12));
+  const wrappedDekBuffer = await webCrypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: wrapIv, tagLength: 128 },
+    wrapKey,
+    dekRaw
+  );
+
+  const ephemeralPublicKey = await webCrypto.subtle.exportKey('jwk', ephemeralPair.publicKey);
+
+  return {
+    alg: 'ECDH-P256-HKDF-SHA256-A256GCM',
+    ephemeralPublicKey,
+    wrapIvBase64: bufferToBase64(wrapIv.buffer),
+    wrappedDekBase64: bufferToBase64(wrappedDekBuffer),
+  };
+}
+
+/**
+ * Unwraps a patient's ECDH-wrapped DEK bundle inside the authorized Hospital enclave browser.
+ *
+ * @param {object} wrappedBundle - { ephemeralPublicKey, wrapIvBase64, wrappedDekBase64 }
+ * @param {object} recipientEcdhPrivateJwk - Recipient hospital ECDH P-256 private JWK
+ * @returns {Promise<CryptoKey>} Unwrapped 256-bit AES-GCM CryptoKey ready for decryptHealthRecord
+ */
+export async function unwrapPatientKeyWithPrivateKey(wrappedBundle, recipientEcdhPrivateJwk) {
+  if (!wrappedBundle?.ephemeralPublicKey || !wrappedBundle?.wrapIvBase64 || !wrappedBundle?.wrappedDekBase64) {
+    throw new Error('Invalid wrapped DEK bundle');
+  }
+
+  const ephemeralPubKey = await webCrypto.subtle.importKey(
+    'jwk',
+    wrappedBundle.ephemeralPublicKey,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+
+  const recipientPrivKey = await webCrypto.subtle.importKey(
+    'jwk',
+    recipientEcdhPrivateJwk,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    ['deriveBits']
+  );
+
+  const sharedBits = await webCrypto.subtle.deriveBits(
+    { name: 'ECDH', public: ephemeralPubKey },
+    recipientPrivKey,
+    256
+  );
+
+  const hkdfBaseKey = await webCrypto.subtle.importKey(
+    'raw',
+    sharedBits,
+    'HKDF',
+    false,
+    ['deriveKey']
+  );
+
+  const wrapKey = await webCrypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(32),
+      info: DEK_WRAP_INFO,
+    },
+    hkdfBaseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+
+  const rawDekBuffer = await webCrypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: new Uint8Array(base64ToBuffer(wrappedBundle.wrapIvBase64)),
+      tagLength: 128,
+    },
+    wrapKey,
+    base64ToBuffer(wrappedBundle.wrappedDekBase64)
+  );
+
+  return await webCrypto.subtle.importKey(
+    'raw',
+    rawDekBuffer,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['decrypt']
+  );
 }

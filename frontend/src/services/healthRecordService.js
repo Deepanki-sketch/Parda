@@ -131,14 +131,28 @@ export async function uploadEncryptedRecord({ patientAddress, recordData, key })
 
 /**
  * Fetches an encrypted record for a patient from Supabase (or local cache).
+ * Prefers exact recordHash match when provided (for cross-laptop wrapped DEK grants).
  * @param {string} patientAddress 
+ * @param {string} [preferredRecordHash]
  * @returns {Promise<object|null>}
  */
-export async function fetchEncryptedRecord(patientAddress) {
+export async function fetchEncryptedRecord(patientAddress, preferredRecordHash = null) {
   const normalizedAddr = patientAddress ? patientAddress.toLowerCase() : 'default';
 
   if (isSupabaseConfigured() && supabase) {
     try {
+      if (preferredRecordHash) {
+        const { data: exactData, error: exactErr } = await supabase
+          .from('encrypted_health_records')
+          .select('*')
+          .eq('record_hash', preferredRecordHash)
+          .maybeSingle();
+
+        if (!exactErr && exactData) {
+          return { ...exactData, source: 'supabase' };
+        }
+      }
+
       const { data, error } = await supabase
         .from('encrypted_health_records')
         .select('*')

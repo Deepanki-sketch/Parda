@@ -52,6 +52,14 @@ export const MOCK_HOSPITALS = [
     licenseNo: "LIC-NY-2024-8849",
     address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
     isApproved: true,
+    ecdhPublicJwk: {
+      key_ops: [],
+      ext: true,
+      kty: "EC",
+      x: "Xd45IOo_hAqzak3KFn0Omk0vpMeWtXD1vLwwiDaTFkA",
+      y: "OEjb__iLmQqQaAiIsl2nmrzD-RcPknPeDYu4yMEQ438",
+      crv: "P-256",
+    },
   },
   {
     id: 102,
@@ -59,6 +67,14 @@ export const MOCK_HOSPITALS = [
     licenseNo: "LIC-CA-2023-1102",
     address: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
     isApproved: true,
+    ecdhPublicJwk: {
+      key_ops: [],
+      ext: true,
+      kty: "EC",
+      x: "K_gG4Gfv8rR3AH3sM4A7qb8xZ5FFwiORy8WXhfUqTCo",
+      y: "Zimwlf3PXA9JEoC1SGAi02UN9rSlLe1CI314ZJdloMI",
+      crv: "P-256",
+    },
   },
 ];
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from './components/Header';
 import RoleGateway from './components/RoleGateway';
 import PardaOpeningSequence from './components/PardaOpeningSequence';
@@ -18,20 +18,20 @@ import {
   setActiveRoleSession,
   clearActiveRoleSession,
   DEMO_USERS,
-  getPendingClaims,
-  addPendingClaim,
-  removePendingClaim,
-  getSettledClaims,
-  addSettledClaim,
-  getHospitalBalanceEth,
-  setHospitalBalanceEth,
-  getPoolBalanceEth,
-  setPoolBalanceEth,
-  getStoredDoctorAccessGranted,
-  setStoredDoctorAccessGranted,
-  getSelectedDelegatedHospital,
-  setSelectedDelegatedHospital,
 } from './services/authService';
+import {
+  getSyncRoomId,
+  getLocalCachedWorkflowState,
+  fetchSyncedWorkflowState,
+  applyMergedCloudMutation,
+  syncGrantUpsert,
+  syncGrantRevoke,
+  syncClaimUpsert,
+  resetSharedWorkflowState,
+  subscribeToWorkflowSync,
+  findActiveGrantForHospital,
+  isGrantActive,
+} from './services/syncService';
 
 const ALLOWED_ROLES = ['gateway', 'patient', 'hospital', 'insurer', 'xray', 'redteam', 'pricing'];
 
@@ -89,7 +89,7 @@ export default function App() {
     setActiveRoleSession(session);
     handleRoleChange(role);
 
-    addAuditLog({
+    addLocalAuditLog({
       type: 'ROLE_AUTHENTICATED',
       title: `Authenticated as ${role.toUpperCase()}: ${userObject.name || userObject.id}`,
       detail: `Scoped execution environment loaded. Address: ${userObject.address || 'N/A'} | Cryptographic isolation active`,
@@ -103,7 +103,7 @@ export default function App() {
     setActiveRoleSessionState(null);
     handleRoleChange('gateway');
 
-    addAuditLog({
+    addLocalAuditLog({
       type: 'LOGOUT',
       title: 'Active Session Terminated',
       detail: 'Sovereign keys and unencrypted credentials flushed from memory. Returned to Portal Gateway.',
@@ -160,25 +160,188 @@ export default function App() {
   // =========================================================================
   // Persistent Workflow State (Synced across Patient, Hospital, and Insurer)
   // =========================================================================
+  const syncRoomId = getSyncRoomId();
+  const [syncStatus, setSyncStatus] = useState('connecting');
   const [isEncrypted, setIsEncrypted] = useState(false);
   const [ipfsCid, setIpfsCid] = useState('bafybeic23ae33cd09cec6723c0b92cb16438072');
-  
-  // Sovereign Patient DEK Access Grant
-  const [doctorAccessGranted, setDoctorAccessGrantedState] = useState(() => getStoredDoctorAccessGranted());
-  const handleSetDoctorAccessGranted = (val) => {
-    setDoctorAccessGrantedState(val);
-    setStoredDoctorAccessGranted(val);
-  };
 
-  const [claimSettled, setClaimSettled] = useState(false);
-  
-  // Dynamic Balances (1 ETH = 10,000 INR)
-  const [hospitalBalanceEth, setHospitalBalanceEthState] = useState(() => getHospitalBalanceEth());
-  const [poolBalanceEth, setPoolBalanceEthState] = useState(() => getPoolBalanceEth());
+  const [workflowState, setWorkflowState] = useState(() => getLocalCachedWorkflowState());
+  const [localSessionLogs, setLocalSessionLogs] = useState([]);
+  const workflowRef = useRef(workflowState);
+  const syncHandleRef = useRef(null);
 
-  // Claims Management (Pending Queue & Settled Ledger)
-  const [pendingClaims, setPendingClaims] = useState(() => getPendingClaims());
-  const [settledClaims, setSettledClaims] = useState(() => getSettledClaims());
+  const addLocalAuditLog = useCallback((log) => {
+    setLocalSessionLogs((prev) => [log, ...prev].slice(0, 15));
+  }, []);
+
+  const commitWorkflowState = useCallback((updater, cloudWriter = null, eventTag = 'state_update') => {
+    const prev = workflowRef.current;
+    const draft = typeof updater === 'function' ? updater(prev) : updater;
+    const nextSeq = (Number(prev.seq) || Number(prev.rev) || 0) + 1;
+    const nextState = {
+      ...prev,
+      ...draft,
+      seq: nextSeq,
+      rev: nextSeq,
+      updatedAt: new Date().toISOString(),
+    };
+    workflowRef.current = nextState;
+    setWorkflowState(nextState);
+    syncHandleRef.current?.markLocalRevision?.(nextState);
+
+    const channel = syncHandleRef.current?.channel || null;
+    const promise = cloudWriter
+      ? cloudWriter(nextState, syncRoomId, channel)
+      : applyMergedCloudMutation(nextState, updater, syncRoomId, channel, eventTag);
+
+    Promise.resolve(promise)
+      .then((merged) => {
+        if (merged) {
+          workflowRef.current = merged;
+          setWorkflowState(merged);
+          syncHandleRef.current?.markLocalRevision?.(merged);
+        }
+      })
+      .catch(() => {});
+
+    return nextState;
+  }, [syncRoomId]);
+
+  useEffect(() => {
+    let mounted = true;
+    const handle = subscribeToWorkflowSync({
+      roomId: syncRoomId,
+      onStatusChange: (status) => {
+        if (mounted) setSyncStatus(status);
+      },
+      onRemoteState: (remoteState) => {
+        if (!mounted || !remoteState) return;
+        workflowRef.current = remoteState;
+        setWorkflowState(remoteState);
+      },
+    });
+    syncHandleRef.current = handle;
+
+    async function hydrateFromCloud() {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('reset') === '1') {
+          const clean = await resetSharedWorkflowState(syncRoomId, handle.channel);
+          if (mounted) {
+            workflowRef.current = clean;
+            setWorkflowState(clean);
+            handle.markLocalRevision(clean);
+          }
+          url.searchParams.delete('reset');
+          window.history.replaceState({}, '', url.toString());
+          return;
+        }
+      }
+
+      const remote = await fetchSyncedWorkflowState(syncRoomId);
+      if (mounted && remote) {
+        workflowRef.current = remote;
+        setWorkflowState(remote);
+        handle.markLocalRevision(remote);
+      }
+    }
+
+    hydrateFromCloud();
+
+    return () => {
+      mounted = false;
+      handle.cleanup();
+      syncHandleRef.current = null;
+    };
+  }, [syncRoomId]);
+
+  const activeGrants = (workflowState.activeGrants || []).filter(isGrantActive);
+  const doctorAccessGranted = activeGrants.length > 0;
+  const activeHospitalGrant = findActiveGrantForHospital(
+    activeGrants,
+    activeRoleSession?.role === 'hospital' ? activeRoleSession.user : null
+  );
+
+  const pendingClaims = workflowState.pendingClaims || [];
+  const settledClaims = workflowState.settledClaims || [];
+  const hospitalBalanceEth = Number(workflowState.hospitalBalanceEth ?? 14.2);
+  const poolBalanceEth = Number(workflowState.poolBalanceEth ?? 10.0);
+  const claimSettled = Boolean(workflowState.claimSettled);
+  const isBreakGlassActive = Boolean(workflowState.isBreakGlassActive);
+  const breakGlassReason =
+    workflowState.breakGlassReason ||
+    'Patient unconscious after severe acute trauma - emergency allergy and blood type check';
+  const auditLogs = [...localSessionLogs, ...(workflowState.auditLogs || [])].slice(0, 50);
+
+  const addAuditLog = useCallback((log) => {
+    commitWorkflowState(
+      (prev) => ({
+        auditLogs: [log, ...(prev.auditLogs || [])].slice(0, 50),
+      }),
+      null,
+      'audit_log'
+    );
+  }, [commitWorkflowState]);
+
+  const handleSetDoctorAccessGranted = useCallback((val) => {
+    if (!val) {
+      commitWorkflowState((prev) => ({ activeGrants: [] }));
+    }
+  }, [commitWorkflowState]);
+
+  const handleGrantHospitalAccess = useCallback((grant, auditLog = null) => {
+    commitWorkflowState(
+      (prev) => {
+        const filtered = (prev.activeGrants || []).filter(
+          (g) =>
+            g.hospitalId !== grant.hospitalId &&
+            g.hospitalName !== grant.hospitalName
+        );
+        return {
+          activeGrants: [{ ...grant, isRevoked: false }, ...filtered],
+          auditLogs: auditLog
+            ? [auditLog, ...(prev.auditLogs || [])].slice(0, 50)
+            : prev.auditLogs,
+        };
+      },
+      (nextState, room, channel) => syncGrantUpsert(grant, nextState, room, channel)
+    );
+  }, [commitWorkflowState]);
+
+  const handleRevokeHospitalAccess = useCallback((grantId, auditLog = null) => {
+    commitWorkflowState(
+      (prev) => ({
+        activeGrants: (prev.activeGrants || []).filter((g) => g.id !== grantId),
+        auditLogs: auditLog
+          ? [auditLog, ...(prev.auditLogs || [])].slice(0, 50)
+          : prev.auditLogs,
+      }),
+      (nextState, room, channel) => syncGrantRevoke(grantId, nextState, room, channel)
+    );
+  }, [commitWorkflowState]);
+
+  const handlePatientRecordSynced = useCallback((patientMeta, updatedGrantIfAny = null) => {
+    commitWorkflowState(
+      (prev) => {
+        let nextGrants = prev.activeGrants || [];
+        if (updatedGrantIfAny) {
+          nextGrants = nextGrants.map((g) =>
+            g.id === updatedGrantIfAny.id || g.hospitalId === updatedGrantIfAny.hospitalId
+              ? { ...g, ...updatedGrantIfAny, isRevoked: false }
+              : g
+          );
+        }
+        return {
+          activePatientMeta: patientMeta,
+          activeGrants: nextGrants,
+        };
+      },
+      updatedGrantIfAny
+        ? (nextState, room, channel) => syncGrantUpsert(updatedGrantIfAny, nextState, room, channel)
+        : null,
+      'patient_meta_updated'
+    );
+  }, [commitWorkflowState]);
 
   const totalSettledEth = settledClaims.reduce(
     (acc, c) => acc + (c.isReplayBlocked ? 0 : (parseFloat(c.amountEth) || 0)),
@@ -186,33 +349,27 @@ export default function App() {
   );
 
   // Hospital Submits ZKP Claim to Insurer Queue
-  const handleSubmitClaimToInsurer = (claim) => {
-    const updated = addPendingClaim(claim);
-    setPendingClaims(updated);
-  };
+  const handleSubmitClaimToInsurer = useCallback((claim) => {
+    commitWorkflowState(
+      (prev) => ({
+        pendingClaims: [claim, ...(prev.pendingClaims || []).filter((c) => c.id !== claim.id)],
+      }),
+      (nextState, room, channel) => syncClaimUpsert(claim, nextState, room, channel)
+    );
+  }, [commitWorkflowState]);
 
   // Insurer Accepts and Settles Claim via MetaMask
-  const handleAcceptAndSettleClaim = (settledData) => {
+  const handleAcceptAndSettleClaim = useCallback((settledData) => {
     const numAmount = parseFloat(settledData.amountEth) || 1.5;
     const inrAmount = Math.round(numAmount * 10000);
-    
-    // 1. Update balances
-    const newHospBal = parseFloat((hospitalBalanceEth + numAmount).toFixed(4));
-    const newPoolBal = parseFloat((Math.max(0, poolBalanceEth - numAmount)).toFixed(4));
-    setHospitalBalanceEthState(newHospBal);
-    setHospitalBalanceEth(newHospBal);
-    setPoolBalanceEthState(newPoolBal);
-    setPoolBalanceEth(newPoolBal);
-    
-    // 2. Remove from pending queue
-    const updatedPending = removePendingClaim(settledData.id);
-    setPendingClaims(updatedPending);
 
-    // 3. Record in settled ledger
     const newClaim = {
       id: settledData.id || `claim-${Date.now()}`,
-      nullifier: settledData.nullifier || ('0x' + Array.from({length: 40}, () => Math.floor(Math.random()*16).toString(16)).join('')),
+      nullifier:
+        settledData.nullifier ||
+        '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
       hospitalName: settledData.hospitalName || 'St. Jude Medical Center',
+      hospitalAddress: settledData.hospitalAddress || settledData.payee || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
       payee: settledData.hospitalAddress || settledData.payee || '0x7099...79C8 (St. Jude)',
       amountEth: numAmount,
       amountInr: inrAmount,
@@ -220,60 +377,59 @@ export default function App() {
       timestamp: new Date().toLocaleTimeString(),
       isReplayBlocked: false,
       txHash: settledData.txHash || '',
+      settledBy: settledData.settledBy || '',
     };
-    
-    const updatedSettled = addSettledClaim(newClaim);
-    setSettledClaims(updatedSettled);
-    setClaimSettled(true);
+
+    commitWorkflowState(
+      (prev) => {
+        const curHosp = Number(prev.hospitalBalanceEth ?? 14.2);
+        const curPool = Number(prev.poolBalanceEth ?? 10.0);
+        return {
+          hospitalBalanceEth: parseFloat((curHosp + numAmount).toFixed(4)),
+          poolBalanceEth: parseFloat(Math.max(0, curPool - numAmount).toFixed(4)),
+          pendingClaims: (prev.pendingClaims || []).filter((c) => c.id !== settledData.id),
+          settledClaims: [newClaim, ...(prev.settledClaims || []).filter((c) => c.id !== newClaim.id)],
+          claimSettled: true,
+        };
+      },
+      (nextState, room, channel) => syncClaimUpsert(newClaim, nextState, room, channel)
+    );
+
     return newClaim;
-  };
+  }, [commitWorkflowState]);
 
   // Sovereign Emergency Trauma Break-Glass
-  const [isBreakGlassActive, setIsBreakGlassActive] = useState(false);
-  const [breakGlassReason, setBreakGlassReason] = useState(
-    "Patient unconscious after severe acute trauma - emergency allergy and blood type check"
-  );
+  const handleTriggerBreakGlass = useCallback((reason) => {
+    const finalReason = reason || workflowRef.current.breakGlassReason;
+    commitWorkflowState((prev) => ({
+      isBreakGlassActive: true,
+      breakGlassReason: finalReason,
+      auditLogs: [
+        {
+          type: 'EMERGENCY_BREAK_GLASS',
+          title: 'EMERGENCY TRAUMA BREAK-GLASS INVOKED',
+          detail: `St. Jude ER Physician invoked emergency clinical override for ${(prev.activePatientMeta?.name || MOCK_PATIENT.name)}. Reason: "${finalReason}" | Hashed to AccessLog.sol`,
+          time: new Date().toLocaleTimeString(),
+        },
+        ...(prev.auditLogs || []),
+      ].slice(0, 50),
+    }));
+  }, [commitWorkflowState]);
 
-  const handleTriggerBreakGlass = (reason) => {
-    setIsBreakGlassActive(true);
-    if (reason) setBreakGlassReason(reason);
-    addAuditLog({
-      type: 'EMERGENCY_BREAK_GLASS',
-      title: 'EMERGENCY TRAUMA BREAK-GLASS INVOKED',
-      detail: `St. Jude ER Physician invoked emergency clinical override for ${MOCK_PATIENT.name}. Reason: "${reason || breakGlassReason}" | Hashed to AccessLog.sol`,
-      time: new Date().toLocaleTimeString(),
-    });
-  };
-
-  const handleRevokeBreakGlass = () => {
-    setIsBreakGlassActive(false);
-    addAuditLog({
-      type: 'ACCESS_REVOKED',
-      title: 'Emergency Break-Glass Window Closed',
-      detail: `Emergency access window closed for ${MOCK_PATIENT.name}. Reverting to sovereign patient custody.`,
-      time: new Date().toLocaleTimeString(),
-    });
-  };
-
-  // Live Audit Log Trail
-  const [auditLogs, setAuditLogs] = useState([
-    {
-      type: 'INIT',
-      title: 'HealthShield Underwriting Escrow Solvency Anchored',
-      detail: 'Liquidity funded with 10.0 ETH | Approved Hospital Merkle Root Set (0x0858...da7b)',
-      time: '04:00:00 AM',
-    },
-    {
-      type: 'RECORD_PINNED',
-      title: 'Patient Encrypted Record Anchored',
-      detail: 'CID: bafybeic23ae33cd09cec... | SHA-256 On-Chain Ciphertext Commitment',
-      time: '04:02:15 AM',
-    }
-  ]);
-
-  const addAuditLog = (log) => {
-    setAuditLogs((prev) => [log, ...prev]);
-  };
+  const handleRevokeBreakGlass = useCallback(() => {
+    commitWorkflowState((prev) => ({
+      isBreakGlassActive: false,
+      auditLogs: [
+        {
+          type: 'ACCESS_REVOKED',
+          title: 'Emergency Break-Glass Window Closed',
+          detail: `Emergency access window closed for ${(prev.activePatientMeta?.name || MOCK_PATIENT.name)}. Reverting to sovereign patient custody.`,
+          time: new Date().toLocaleTimeString(),
+        },
+        ...(prev.auditLogs || []),
+      ].slice(0, 50),
+    }));
+  }, [commitWorkflowState]);
 
   // Patient Modal Controls
   const [currentPatient, setCurrentPatient] = useState(() => getActivePatientSession());
@@ -355,6 +511,12 @@ export default function App() {
             setIpfsCid={setIpfsCid}
             doctorAccessGranted={doctorAccessGranted}
             setDoctorAccessGranted={handleSetDoctorAccessGranted}
+            activeGrants={activeGrants}
+            onGrantHospitalAccess={handleGrantHospitalAccess}
+            onRevokeHospitalAccess={handleRevokeHospitalAccess}
+            onPatientRecordSynced={handlePatientRecordSynced}
+            syncStatus={syncStatus}
+            syncRoomId={syncRoomId}
             claimSettled={claimSettled}
             settledClaims={settledClaims}
             isBreakGlassActive={isBreakGlassActive}
@@ -371,7 +533,11 @@ export default function App() {
         {/* 3. DEDICATED HOSPITAL PORTAL */}
         {activeRole === 'hospital' && (
           <HospitalPortal
-            doctorAccessGranted={doctorAccessGranted}
+            doctorAccessGranted={Boolean(activeHospitalGrant)}
+            activeHospitalGrant={activeHospitalGrant}
+            syncedPatientMeta={workflowState.activePatientMeta}
+            syncStatus={syncStatus}
+            syncRoomId={syncRoomId}
             claimSettled={claimSettled}
             hospitalBalanceEth={hospitalBalanceEth}
             onSettleClaim={handleAcceptAndSettleClaim}
@@ -401,6 +567,8 @@ export default function App() {
             auditLogs={auditLogs}
             addAuditLog={addAuditLog}
             activeInsurerSession={activeRoleSession?.user || DEMO_USERS.insurer}
+            syncStatus={syncStatus}
+            syncRoomId={syncRoomId}
           />
         )}
 
@@ -411,6 +579,8 @@ export default function App() {
             settledClaims={settledClaims}
             latestClaim={settledClaims[0]}
             isBreakGlassActive={isBreakGlassActive}
+            currentPatient={currentPatient}
+            syncedPatientMeta={workflowState.activePatientMeta}
           />
         )}
 
