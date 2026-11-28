@@ -970,25 +970,25 @@ export default function HospitalPortal({
                 }}
               >
                 <div className="flex items-center justify-between font-sans font-medium text-xs">
-                  <span className="flex items-center gap-1.5 font-bold" style={{ color: '#8C652D' }}>
-                    <Server className="w-3.5 h-3.5" style={{ color: '#8C652D', stroke: '#8C652D' }} />
+                  <span className="flex items-center gap-1.5 font-bold text-[#344E41]" style={{ color: '#344E41' }}>
+                    <Server className="w-3.5 h-3.5 text-[#344E41]" style={{ color: '#344E41', stroke: '#344E41' }} />
                     <span>Enclave Proof Telemetry</span>
                   </span>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(185, 149, 97, 0.20)', borderColor: 'rgba(185, 149, 97, 0.50)', color: '#7A5522' }}>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(52, 78, 65, 0.10)', borderColor: 'rgba(52, 78, 65, 0.35)', color: '#344E41' }}>
                     Groth16 (BN254)
                   </span>
                 </div>
-                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
+                <div className="flex justify-between text-[11px] font-medium" style={{ color: '#344E41' }}>
                   <span>Circuit Constraints:</span>
-                  <span className="font-semibold" style={{ color: '#2B2319' }}>14,208 R1CS</span>
+                  <span className="font-bold text-[#1B2E24]" style={{ color: '#1B2E24' }}>14,208 R1CS</span>
                 </div>
-                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
+                <div className="flex justify-between text-[11px] font-medium" style={{ color: '#344E41' }}>
                   <span>On-Chain Gas:</span>
-                  <span className="font-semibold" style={{ color: '#2B2319' }}>~214,000 gas (EVM Pairing)</span>
+                  <span className="font-bold text-[#1B2E24]" style={{ color: '#1B2E24' }}>~214,000 gas (EVM Pairing)</span>
                 </div>
-                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
+                <div className="flex justify-between text-[11px] font-medium" style={{ color: '#344E41' }}>
                   <span>Enclave Shield:</span>
-                  <span className="font-bold" style={{ color: '#8C652D' }}>Zero Clinical Leakage</span>
+                  <span className="font-bold text-[#344E41]" style={{ color: '#344E41' }}>Zero Clinical Leakage</span>
                 </div>
               </div>
 
