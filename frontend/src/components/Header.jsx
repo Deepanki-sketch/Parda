@@ -1,17 +1,38 @@
 import React, { useState } from 'react';
-import { Shield, User, Building2, Landmark, CheckCircle2, Copy, RotateCcw, Eye, ShieldAlert, Sparkles, Wallet, ExternalLink, Power } from 'lucide-react';
+import {
+  Shield,
+  User,
+  Building2,
+  Landmark,
+  CheckCircle2,
+  Copy,
+  RotateCcw,
+  Eye,
+  ShieldAlert,
+  Sparkles,
+  Wallet,
+  ExternalLink,
+  Power,
+  LogOut,
+  ArrowLeft,
+  ChevronDown,
+  Layers
+} from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
 
 export default function Header({
   activeRole,
   setActiveRole,
-  currentAccount,
+  activeRoleSession,
+  onLogout,
   onReplayIntro,
   currentPatient,
   onOpenAuthModal,
+  pendingClaimsCount = 0,
 }) {
   const [copied, setCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   const { account, balance, isConnecting, isSepolia, connectWallet, disconnectWallet, switchNetwork } = useWallet();
 
@@ -23,128 +44,135 @@ export default function Header({
     }
   };
 
+  const isAuxiliaryView = ['xray', 'redteam', 'pricing'].includes(activeRole);
+  const isGateway = activeRole === 'gateway' || !activeRoleSession;
+
   return (
-    <header className="sticky top-0 z-40 px-3 sm:px-6 lg:px-8 w-full bg-[#0B1713]/90 backdrop-blur-md border-b border-[#9DAF9D]/15 font-sans">
+    <header className="sticky top-0 z-40 px-3 sm:px-6 lg:px-8 w-full bg-[#0B1713]/95 backdrop-blur-md border-b border-[#9DAF9D]/15 font-sans">
       <div className="max-w-7xl mx-auto py-2.5 flex flex-wrap items-center justify-between gap-2.5">
         
-        {/* Brand */}
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 rounded bg-[#12231C] border border-[#B99561]/40 flex items-center justify-center text-[#B99561]">
-            <Shield className="w-3 h-3" />
+        {/* Brand & Home Navigation */}
+        <div 
+          onClick={() => setActiveRole(activeRoleSession ? activeRoleSession.role : 'gateway')}
+          className="flex items-center space-x-2 cursor-pointer group"
+          title="Return to Portal Home"
+        >
+          <div className="w-7 h-7 rounded bg-[#12231C] border border-[#B99561]/40 flex items-center justify-center text-[#B99561] group-hover:border-[#B99561] transition-all">
+            <Shield className="w-3.5 h-3.5" />
           </div>
-          <span className="text-sm sm:text-base font-medium tracking-tight text-[#F3EFE5]">
-            Parda
+          <span className="text-sm sm:text-base font-serif font-bold tracking-tight text-[#F3EFE5]">
+            PARDA
           </span>
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#12231C] text-[#B99561] border border-[#B99561]/30 hidden sm:inline-block">
-            ZKP Web3
+            ZKP Healthcare
           </span>
         </div>
 
-        {/* Center: The Role & Verification Control */}
-        <div className="flex flex-wrap items-center bg-[#12231C] p-0.5 sm:p-1 rounded border border-[#9DAF9D]/20 order-3 sm:order-2 w-full sm:w-auto justify-center gap-1" aria-label="Role switcher">
-          <button
-            onClick={() => setActiveRole('patient')}
-            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
-              activeRole === 'patient'
-                ? 'bg-[#192C23] text-[#F3EFE5] font-medium border border-[#B99561]/40 shadow-sm'
-                : 'text-[#AEB8AA] hover:text-[#F3EFE5]'
-            }`}
-          >
-            <User className="w-3 h-3 text-[#B99561]" />
-            <span>1. Patient</span>
-          </button>
-
-          <button
-            onClick={() => setActiveRole('hospital')}
-            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
-              activeRole === 'hospital'
-                ? 'bg-[#192C23] text-[#F3EFE5] font-medium border border-[#B99561]/40 shadow-sm'
-                : 'text-[#AEB8AA] hover:text-[#F3EFE5]'
-            }`}
-          >
-            <Building2 className="w-3 h-3 text-[#B99561]" />
-            <span>2. Hospital</span>
-          </button>
-
-          <button
-            onClick={() => setActiveRole('insurer')}
-            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
-              activeRole === 'insurer'
-                ? 'bg-[#192C23] text-[#F3EFE5] font-medium border border-[#B99561]/40 shadow-sm'
-                : 'text-[#AEB8AA] hover:text-[#F3EFE5]'
-            }`}
-          >
-            <Landmark className="w-3 h-3 text-[#B99561]" />
-            <span>3. Insurer</span>
-          </button>
-
-          <div className="h-4 w-px bg-[#9DAF9D]/20 mx-0.5 hidden md:block" />
-
-          <button
-            onClick={() => setActiveRole('xray')}
-            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
-              activeRole === 'xray'
-                ? 'bg-purple-950/60 text-purple-200 font-medium border border-purple-500/40 shadow-sm'
-                : 'text-purple-400 hover:text-purple-200'
-            }`}
-          >
-            <Eye className="w-3 h-3 text-purple-400" />
-            <span>Privacy X-Ray</span>
-          </button>
-
-          <button
-            onClick={() => setActiveRole('redteam')}
-            className={`btn-pressable cursor-pointer flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-[11px] sm:text-xs transition-colors ${
-              activeRole === 'redteam'
-                ? 'bg-rose-950/60 text-rose-200 font-medium border border-rose-500/40 shadow-sm'
-                : 'text-rose-400 hover:text-rose-200'
-            }`}
-          >
-            <ShieldAlert className="w-3 h-3 text-rose-400" />
-            <span>Red-Team</span>
-          </button>
-        </div>
-
-        {/* Right: Replay Intro & MetaMask / Wallet Control */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs order-2 sm:order-3 relative">
+        {/* Center: Active Persona Badge & Tools (NO open role switcher!) */}
+        <div className="flex flex-wrap items-center order-3 sm:order-2 w-full sm:w-auto justify-center gap-2">
           
-          {/* Patient Sovereign Session Quick Switcher */}
-          {currentPatient && onOpenAuthModal ? (
-            <div className="flex items-center space-x-1.5 bg-[#12231C] px-2 py-1 rounded border border-[#B99561]/40 text-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          {/* Case A: User is inside an auxiliary view (X-Ray, Red-Team, Pricing) */}
+          {isAuxiliaryView ? (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => onOpenAuthModal('login')}
-                className="text-[#F3EFE5] font-medium hover:text-[#B99561] transition-colors truncate max-w-[100px] sm:max-w-[130px]"
-                title={`Logged in as ${currentPatient.name}. Click to switch or register.`}
+                onClick={() => setActiveRole(activeRoleSession ? activeRoleSession.role : 'gateway')}
+                className="btn-pressable flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#12231C] hover:bg-[#192C23] border border-[#B99561]/40 text-[#F3EFE5] text-xs font-mono font-medium transition-colors cursor-pointer"
               >
-                {currentPatient.name}
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenAuthModal('register')}
-                className="text-[10px] text-[#B99561] hover:text-[#F3EFE5] px-1 py-0.5 rounded bg-[#192C23] border border-[#B99561]/30 hidden md:inline-block"
-                title="Register new patient"
-              >
-                +New
+                <ArrowLeft className="w-3.5 h-3.5 text-[#B99561]" />
+                <span>Return to {activeRoleSession ? `${activeRoleSession.role.toUpperCase()} PORTAL` : 'GATEWAY'}</span>
               </button>
             </div>
-          ) : onOpenAuthModal ? (
-            <button
-              type="button"
-              onClick={() => onOpenAuthModal('login')}
-              className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#192C23] border border-[#B99561]/50 text-[#B99561] hover:text-[#F3EFE5] text-xs font-medium transition-colors"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Login / Register</span>
-            </button>
-          ) : null}
+          ) : !isGateway && activeRoleSession ? (
+            /* Case B: User is authenticated in a dedicated role (Patient, Hospital, or Insurer) */
+            <div className="flex items-center gap-2">
+              
+              {/* Dedicated Persona Pill */}
+              <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-[#12231C] border border-[#B99561]/40 text-xs font-mono text-[#F3EFE5] shadow-sm">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                
+                {activeRoleSession.role === 'patient' && (
+                  <div className="flex items-center space-x-1.5 text-[#F3EFE5]">
+                    <User className="w-3.5 h-3.5 text-[#B99561]" />
+                    <span className="text-[#AEB8AA] font-normal">Patient:</span>
+                    <span className="font-semibold text-[#F3EFE5]">{activeRoleSession.user?.name || 'Alex Doe'}</span>
+                  </div>
+                )}
 
+                {activeRoleSession.role === 'hospital' && (
+                  <div className="flex items-center space-x-1.5 text-[#F3EFE5]">
+                    <Building2 className="w-3.5 h-3.5 text-[#B99561]" />
+                    <span className="text-[#AEB8AA] font-normal">Hospital:</span>
+                    <span className="font-semibold text-[#F3EFE5]">{activeRoleSession.user?.name || 'St. Jude Medical'}</span>
+                  </div>
+                )}
+
+                {activeRoleSession.role === 'insurer' && (
+                  <div className="flex items-center space-x-1.5 text-[#F3EFE5]">
+                    <Landmark className="w-3.5 h-3.5 text-[#B99561]" />
+                    <span className="text-[#AEB8AA] font-normal">Insurer:</span>
+                    <span className="font-semibold text-[#F3EFE5]">{activeRoleSession.user?.name || 'HealthShield Mutual'}</span>
+                    {pendingClaimsCount > 0 && (
+                      <span className="ml-1 text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500 text-black">
+                        {pendingClaimsCount}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Security & Verification Dropdown Link */}
+              <button
+                type="button"
+                onClick={() => setActiveRole('xray')}
+                className="btn-pressable hidden md:flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-purple-950/50 hover:bg-purple-900/60 border border-purple-500/30 text-purple-200 text-xs transition-colors cursor-pointer"
+                title="Open Zero-Knowledge Privacy X-Ray Inspector"
+              >
+                <Eye className="w-3.5 h-3.5 text-purple-400" />
+                <span>Privacy X-Ray</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveRole('redteam')}
+                className="btn-pressable hidden md:flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 border border-rose-500/30 text-rose-200 text-xs transition-colors cursor-pointer"
+                title="Open Red-Team Adversarial Test Suite"
+              >
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                <span>Red-Team</span>
+              </button>
+
+              {/* Dedicated Log Out / Switch Persona Button */}
+              <button
+                type="button"
+                onClick={onLogout}
+                className="btn-pressable flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 text-xs font-mono font-medium transition-colors cursor-pointer"
+                title="Log out of this role and return to portal selection"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                <span>Switch Role</span>
+              </button>
+
+            </div>
+          ) : (
+            /* Case C: User is on the Gateway (selecting a role) */
+            <div className="flex items-center space-x-2 text-xs font-mono text-[#AEB8AA]">
+              <span className="px-3 py-1 rounded-full bg-[#12231C] border border-[#9DAF9D]/20 text-[#B99561]">
+                🔒 Cryptographically Isolated Execution
+              </span>
+            </div>
+          )}
+
+        </div>
+
+        {/* Right: Intro Replay & MetaMask / Wallet Control */}
+        <div className="flex items-center space-x-2 text-xs order-2 sm:order-3 relative">
+          
           <button
             onClick={onReplayIntro}
             aria-label="Replay intro"
-            title="Replay intro"
-            className="p-1.5 sm:p-2 rounded bg-[#12231C] hover:bg-[#192C23] border border-[#9DAF9D]/20 text-[#AEB8AA] hover:text-[#F3EFE5] transition-colors"
+            title="Replay intro sequence"
+            className="p-1.5 sm:p-2 rounded-lg bg-[#12231C] hover:bg-[#192C23] border border-[#9DAF9D]/20 text-[#AEB8AA] hover:text-[#F3EFE5] transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
@@ -154,7 +182,7 @@ export default function Header({
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="flex items-center space-x-2 px-2.5 py-1.5 rounded bg-[#12231C] border border-[#B99561]/50 text-[#F3EFE5] hover:border-[#B99561] transition-all text-xs"
+                className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-[#12231C] border border-[#B99561]/50 text-[#F3EFE5] hover:border-[#B99561] transition-all text-xs cursor-pointer"
               >
                 {/* Sepolia Green Badge */}
                 <span className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-[10px]">
@@ -202,7 +230,7 @@ export default function Header({
                   {!isSepolia && (
                     <button
                       onClick={() => switchNetwork(11155111)}
-                      className="w-full py-1.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 text-xs text-center font-medium"
+                      className="w-full py-1.5 rounded bg-amber-950 text-amber-300 border border-amber-500/40 text-xs text-center font-medium cursor-pointer"
                     >
                       Switch to Sepolia Network
                     </button>
@@ -223,7 +251,7 @@ export default function Header({
                       disconnectWallet();
                       setMenuOpen(false);
                     }}
-                    className="w-full flex items-center justify-center space-x-1.5 py-1.5 rounded bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 text-xs font-medium transition-colors"
+                    className="w-full flex items-center justify-center space-x-1.5 py-1.5 rounded bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 text-xs font-medium transition-colors cursor-pointer"
                   >
                     <Power className="w-3 h-3" />
                     <span>Disconnect</span>
@@ -235,7 +263,7 @@ export default function Header({
             <button
               onClick={connectWallet}
               disabled={isConnecting}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded bg-[#12231C] hover:bg-[#192C23] border border-[#B99561]/60 text-[#B99561] hover:text-[#c9a674] transition-all text-xs font-medium shadow-sm hover:shadow-[0_0_12px_rgba(185,149,97,0.25)]"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#12231C] hover:bg-[#192C23] border border-[#B99561]/60 text-[#B99561] hover:text-[#c9a674] transition-all text-xs font-medium shadow-sm hover:shadow-[0_0_12px_rgba(185,149,97,0.25)] cursor-pointer"
             >
               <Wallet className="w-3.5 h-3.5" />
               <span>{isConnecting ? 'Connecting...' : 'Connect MetaMask'}</span>

@@ -594,15 +594,10 @@ export default function PatientPortal({
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <FolderPlus className="w-4 h-4 text-[#9E7C4B] shrink-0" />
+                    <FolderPlus className="w-4 h-4 text-[#344E41] shrink-0" />
                     <span 
-                      className="text-xs font-mono font-bold uppercase tracking-wider"
-                      style={{
-                        background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        color: 'rgba(140, 101, 45, 0.95)'
-                      }}
+                      className="text-xs font-mono font-bold uppercase tracking-wider text-[#344E41]"
+                      style={{ color: '#344E41' }}
                     >
                       Add Medical Files & Update Vault ({activePatient.attachedFiles?.length || 0})
                     </span>
@@ -615,13 +610,8 @@ export default function PatientPortal({
                         e.stopPropagation();
                         onOpenAddRecordModal();
                       }}
-                      className="btn-upload text-xs font-mono font-medium hover:font-extrabold cursor-pointer transition-all"
-                      style={{
-                        background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        color: 'rgba(140, 101, 45, 0.95)'
-                      }}
+                      className="btn-upload text-xs font-mono font-semibold hover:font-extrabold cursor-pointer transition-all text-[#344E41]"
+                      style={{ color: '#344E41' }}
                       title="Upload medical documents"
                     >
                       Upload
@@ -632,8 +622,8 @@ export default function PatientPortal({
                 {/* Subtle fade-out body area matching square shape */}
                 <div className="flex-1 min-h-[45px] flex items-center justify-center px-4 py-2">
                   <span 
-                    className="text-[11px] font-mono italic opacity-70 group-hover:opacity-100 transition-opacity"
-                    style={{ color: 'rgba(140, 101, 45, 0.90)' }}
+                    className="text-[11px] font-mono italic font-medium opacity-90 group-hover:opacity-100 transition-opacity text-[#344E41]"
+                    style={{ color: '#344E41' }}
                   >
                     Click to view files, keys & protocol status
                   </span>
@@ -641,7 +631,7 @@ export default function PatientPortal({
 
                 {/* Small downward arrow, not bold */}
                 <div className="pb-2.5 pt-1 flex justify-center items-center">
-                  <ChevronDown className="w-4 h-4 text-[#9E7C4B] stroke-[1.5] transition-transform duration-200 group-hover:translate-y-0.5" />
+                  <ChevronDown className="w-4 h-4 text-[#344E41] stroke-[1.5] transition-transform duration-200 group-hover:translate-y-0.5" />
                 </div>
               </div>
             ) : (
@@ -659,15 +649,10 @@ export default function PatientPortal({
                   style={{ borderColor: 'rgba(158, 124, 75, 0.35)' }}
                 >
                   <div className="flex items-center gap-2">
-                    <FolderPlus className="w-4 h-4 text-[#9E7C4B] shrink-0" />
+                    <FolderPlus className="w-4 h-4 text-[#344E41] shrink-0" />
                     <span 
-                      className="text-xs font-mono font-bold uppercase tracking-wider"
-                      style={{
-                        background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        color: 'rgba(140, 101, 45, 0.95)'
-                      }}
+                      className="text-xs font-mono font-bold uppercase tracking-wider text-[#344E41]"
+                      style={{ color: '#344E41' }}
                     >
                       Add Medical Files & Update Vault ({activePatient.attachedFiles?.length || 0})
                     </span>
@@ -678,13 +663,8 @@ export default function PatientPortal({
                       <button
                         type="button"
                         onClick={onOpenAddRecordModal}
-                        className="btn-upload text-xs font-mono font-medium hover:font-extrabold cursor-pointer transition-all"
-                        style={{
-                          background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          color: 'rgba(140, 101, 45, 0.95)'
-                        }}
+                        className="btn-upload text-xs font-mono font-semibold hover:font-extrabold cursor-pointer transition-all text-[#344E41]"
+                        style={{ color: '#344E41' }}
                         title="Upload medical documents"
                       >
                         Upload
@@ -693,11 +673,11 @@ export default function PatientPortal({
                     <button
                       type="button"
                       onClick={() => setIsAttachedSectionOpen(false)}
-                      className="p-1.5 rounded-lg text-[#9E7C4B] hover:bg-[#9E7C4B]/15 transition-all flex items-center justify-center cursor-pointer"
+                      className="p-1.5 rounded-lg text-[#344E41] hover:bg-[#344E41]/10 transition-all flex items-center justify-center cursor-pointer"
                       title="Collapse section"
                       aria-label="Collapse section"
                     >
-                      <ChevronDown className="w-4 h-4 text-[#9E7C4B] stroke-[1.5] rotate-180" />
+                      <ChevronDown className="w-4 h-4 text-[#344E41] stroke-[1.5] rotate-180" />
                     </button>
                   </div>
                 </div>
@@ -705,11 +685,11 @@ export default function PatientPortal({
                   {/* Section 1: Attached Encrypted Medical Files List */}
                   {(!activePatient.attachedFiles || activePatient.attachedFiles.length === 0) ? (
                     <div 
-                      className="p-4 rounded-xl border text-center text-xs italic"
+                      className="p-4 rounded-xl border text-center text-xs italic font-medium"
                       style={{
                         background: 'rgba(185, 149, 97, 0.12)',
                         borderColor: 'rgba(158, 124, 75, 0.35)',
-                        color: 'rgba(140, 101, 45, 0.95)'
+                        color: '#344E41'
                       }}
                     >
                       No medical files attached yet. Click "Upload" to upload lab scans or prescriptions.
@@ -737,34 +717,29 @@ export default function PatientPortal({
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex items-start space-x-2.5 min-w-0">
-                                <FileCheck className="w-4 h-4 text-[#9E7C4B] shrink-0 mt-0.5" />
+                                <FileCheck className="w-4 h-4 text-[#344E41] shrink-0 mt-0.5" />
                                 <div className="min-w-0">
                                   <div 
-                                    className="font-medium truncate"
-                                    style={{
-                                      background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                                      WebkitBackgroundClip: 'text',
-                                      WebkitTextFillColor: 'transparent',
-                                      color: 'rgba(140, 101, 45, 0.95)'
-                                    }}
+                                    className="font-semibold truncate text-[#344E41]"
+                                    style={{ color: '#344E41' }}
                                   >
                                     {file.name}
                                   </div>
                                   <div 
-                                    className="text-[10px] font-mono flex flex-wrap items-center gap-2 mt-0.5"
-                                    style={{ color: 'rgba(140, 101, 45, 0.88)' }}
+                                    className="text-[10px] font-mono flex flex-wrap items-center gap-2 mt-0.5 text-[#344E41]"
+                                    style={{ color: '#344E41' }}
                                   >
-                                    <span className="font-semibold text-[#8C652D]">{file.category}</span>
+                                    <span className="font-bold text-[#344E41]">{file.category}</span>
                                     <span>•</span>
                                     <span>{file.sizeFormatted}</span>
                                     <span>•</span>
                                     <span>Uploaded {file.uploadDate}</span>
                                     <span>•</span>
-                                    <span className="text-emerald-700 font-semibold">AES-256-GCM Verified</span>
+                                    <span className="text-emerald-800 font-bold">AES-256-GCM Verified</span>
                                   </div>
                                   <div 
-                                    className="text-[10px] font-mono truncate mt-0.5"
-                                    style={{ color: 'rgba(140, 101, 45, 0.75)' }}
+                                    className="text-[10px] font-mono truncate mt-0.5 opacity-80"
+                                    style={{ color: '#344E41' }}
                                   >
                                     Digest: {file.fileHash}
                                   </div>
@@ -780,11 +755,11 @@ export default function PatientPortal({
                                 <button
                                   type="button"
                                   onClick={() => setPreviewingDoc(isSelected ? null : file)}
-                                  className="btn-pressable px-2 py-1 rounded border text-[10px] font-mono shrink-0 transition-colors cursor-pointer"
+                                  className="btn-pressable px-2 py-1 rounded border text-[10px] font-mono shrink-0 transition-colors cursor-pointer font-bold"
                                   style={{
-                                    background: 'rgba(185, 149, 97, 0.20)',
-                                    borderColor: 'rgba(158, 124, 75, 0.40)',
-                                    color: '#7A5522'
+                                    background: 'rgba(52, 78, 65, 0.08)',
+                                    borderColor: 'rgba(52, 78, 65, 0.35)',
+                                    color: '#344E41'
                                   }}
                                 >
                                   {isSelected ? 'Hide Ciphertext' : 'Inspect Ciphertext'}
@@ -799,24 +774,24 @@ export default function PatientPortal({
                                 style={{
                                   background: 'rgba(185, 149, 97, 0.16)',
                                   borderColor: 'rgba(158, 124, 75, 0.35)',
-                                  color: 'rgba(140, 101, 45, 0.95)'
+                                  color: '#344E41'
                                 }}
                               >
                                 <div className="flex items-center justify-between text-xs text-emerald-800 font-semibold">
                                   <span>Decrypted Locally in Browser RAM</span>
-                                  <span className="text-[10px]" style={{ color: 'rgba(140, 101, 45, 0.85)' }}>0 Bytes Sent Plaintext</span>
+                                  <span className="text-[10px]" style={{ color: '#344E41' }}>0 Bytes Sent Plaintext</span>
                                 </div>
                                 <div 
-                                  className="p-2 rounded border text-[11px] break-words"
+                                  className="p-2 rounded border text-[11px] break-words font-medium"
                                   style={{
                                     background: '#FAF7F2',
                                     borderColor: 'rgba(158, 124, 75, 0.25)',
-                                    color: '#7A5522'
+                                    color: '#344E41'
                                   }}
                                 >
                                   {file.previewText || 'AES-256-GCM decrypted verification passed successfully.'}
                                 </div>
-                                <div className="text-[10px]" style={{ color: 'rgba(140, 101, 45, 0.75)' }}>
+                                <div className="text-[10px] opacity-80" style={{ color: '#344E41' }}>
                                   Ciphertext Size: {file.encryptedSize} • SHA-256 On-Chain Commitment Anchored
                                 </div>
                               </div>
@@ -837,21 +812,16 @@ export default function PatientPortal({
                   >
                     <div className="flex items-center justify-between">
                       <span 
-                        className="text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 font-semibold"
-                        style={{
-                          background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          color: 'rgba(140, 101, 45, 0.95)'
-                        }}
+                        className="text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 font-bold text-[#344E41]"
+                        style={{ color: '#344E41' }}
                       >
-                        <Key className="w-3.5 h-3.5 text-[#9E7C4B]" />
+                        <Key className="w-3.5 h-3.5 text-[#344E41]" />
                         <span>Sovereign Decryption Key (AES-256)</span>
                       </span>
                       <button
                         type="button"
                         onClick={() => setShowKey(!showKey)}
-                        className="text-[11px] text-[#9E7C4B] hover:text-[#7A5522] hover:underline cursor-pointer font-bold"
+                        className="text-[11px] text-[#344E41] hover:underline cursor-pointer font-bold"
                       >
                         {showKey ? 'Hide Key' : 'Reveal Key'}
                       </button>
@@ -864,13 +834,13 @@ export default function PatientPortal({
                         borderColor: 'rgba(158, 124, 75, 0.35)'
                       }}
                     >
-                      <span className="truncate max-w-[280px]" style={{ color: '#7A5522' }}>
+                      <span className="truncate max-w-[280px] font-semibold text-[#344E41]" style={{ color: '#344E41' }}>
                         {showKey && patientKeyBase64 ? patientKeyBase64 : '••••••••••••••••••••••••••••••••••••••••••••'}
                       </span>
                       <button
                         type="button"
                         onClick={copyKeyToClipboard}
-                        className="btn-copy text-[#9E7C4B] hover:text-[#7D5825] p-1 flex items-center justify-center transition-all cursor-pointer shrink-0"
+                        className="btn-copy text-[#344E41] hover:text-[#1F352B] p-1 flex items-center justify-center transition-all cursor-pointer shrink-0"
                         title={copiedKey ? "Copied!" : "Copy patient AES-256 key"}
                         aria-label="Copy key"
                       >
@@ -885,19 +855,14 @@ export default function PatientPortal({
                     {/* On-Chain SHA-256 Anchor */}
                     <div className="pt-2 border-t" style={{ borderColor: 'rgba(158, 124, 75, 0.25)' }}>
                       <div 
-                        className="flex items-center justify-between text-xs font-mono font-semibold"
-                        style={{
-                          background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          color: 'rgba(140, 101, 45, 0.95)'
-                        }}
+                        className="flex items-center justify-between text-xs font-mono font-bold text-[#344E41]"
+                        style={{ color: '#344E41' }}
                       >
                         <span>ON-CHAIN ANCHOR HASH (SHA-256):</span>
                         <button
                           type="button"
                           onClick={copyHashToClipboard}
-                          className="btn-copy text-[#9E7C4B] hover:text-[#7D5825] p-1 flex items-center justify-center transition-all cursor-pointer"
+                          className="btn-copy text-[#344E41] hover:text-[#1F352B] p-1 flex items-center justify-center transition-all cursor-pointer"
                           title={copiedHash ? "Copied!" : "Copy anchor hash"}
                           aria-label="Copy anchor hash"
                         >
@@ -909,16 +874,16 @@ export default function PatientPortal({
                         </button>
                       </div>
                       <div 
-                        className="text-xs font-mono break-all mt-1 p-2 rounded border"
+                        className="text-xs font-mono font-semibold break-all mt-1 p-2 rounded border text-[#344E41]"
                         style={{
                           background: '#FAF7F2',
                           borderColor: 'rgba(158, 124, 75, 0.30)',
-                          color: '#7A5522'
+                          color: '#344E41'
                         }}
                       >
                         {recordHash || '0x4ead9644ca55d50750feaad0b2dfbb1b9862d8a3bbe3518d579d10ba6b3c7f48'}
                       </div>
-                      <div className="text-[11px] mt-1" style={{ color: 'rgba(140, 101, 45, 0.88)' }}>
+                      <div className="text-[11px] mt-1 text-[#344E41] opacity-85" style={{ color: '#344E41' }}>
                         Anchored to Sepolia smart contracts. Proves data integrity without exposing diagnoses.
                       </div>
                     </div>
@@ -934,27 +899,22 @@ export default function PatientPortal({
                   >
                     <div className="flex items-center justify-between text-xs font-mono">
                       <span 
-                        className="uppercase tracking-wider font-semibold"
-                        style={{
-                          background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          color: 'rgba(140, 101, 45, 0.95)'
-                        }}
+                        className="uppercase tracking-wider font-bold text-[#344E41]"
+                        style={{ color: '#344E41' }}
                       >
                         Health Claims Protocol Status
                       </span>
-                      <span className="text-[#9E7C4B] font-bold">Zero-Knowledge Settlement</span>
+                      <span className="text-[#344E41] font-bold">Zero-Knowledge Settlement</span>
                     </div>
-                    <p className="text-xs leading-relaxed" style={{ color: 'rgba(140, 101, 45, 0.95)' }}>
+                    <p className="text-xs leading-relaxed text-[#344E41]" style={{ color: '#344E41' }}>
                       {claimSettled ? (
-                        <span className="text-emerald-700 font-medium flex items-center gap-1.5">
+                        <span className="text-emerald-800 font-semibold flex items-center gap-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                           Claim settled on Sepolia! Hospital received cashless reimbursement with 0 medical notes revealed.
                         </span>
                       ) : activeGrants.length > 0 ? (
                         <span>
-                          Access is active for <strong style={{ color: '#7A5522' }}>{activeGrants[0].hospitalName}</strong>. The attending physician can now fetch the encrypted record from Supabase, decrypt it in their enclave, and compile the Groth16 witness.
+                          Access is active for <strong className="font-bold text-[#344E41]">{activeGrants[0].hospitalName}</strong>. The attending physician can now fetch the encrypted record from Supabase, decrypt it in their enclave, and compile the Groth16 witness.
                         </span>
                       ) : (
                         <span>
@@ -967,15 +927,15 @@ export default function PatientPortal({
                         <button
                           type="button"
                           onClick={() => setActiveRole('hospital')}
-                          className="py-1.5 px-3 rounded border text-xs font-mono font-bold transition-colors inline-flex items-center space-x-1.5 cursor-pointer"
+                          className="py-1.5 px-3 rounded border text-xs font-mono font-bold transition-colors inline-flex items-center space-x-1.5 cursor-pointer text-[#344E41]"
                           style={{
-                            background: 'rgba(185, 149, 97, 0.22)',
-                            borderColor: '#9E7C4B',
-                            color: '#7A5522'
+                            background: 'rgba(52, 78, 65, 0.08)',
+                            borderColor: '#344E41',
+                            color: '#344E41'
                           }}
                         >
                           <span>Switch to 2. Hospital Provider to Request Claim</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-[#9E7C4B]" />
+                          <ArrowRight className="w-3.5 h-3.5 text-[#344E41]" />
                         </button>
                       </div>
                     )}
@@ -986,25 +946,18 @@ export default function PatientPortal({
                     <button
                       type="button"
                       onClick={() => setIsAttachedSectionOpen(false)}
-                      className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-sm group"
+                      className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all cursor-pointer shadow-sm group text-[#344E41]"
                       style={{
                         background: '#FAF7F2',
-                        borderColor: '#9E7C4B',
-                        color: '#7A5522'
+                        borderColor: '#344E41',
+                        color: '#344E41'
                       }}
                       title="Collapse section"
                     >
-                      <span
-                        style={{
-                          background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          color: 'rgba(140, 101, 45, 0.95)'
-                        }}
-                      >
+                      <span style={{ color: '#344E41' }}>
                         Collapse Dropdown
                       </span>
-                      <ChevronDown className="w-4 h-4 text-[#9E7C4B] stroke-[1.5] rotate-180 group-hover:-translate-y-0.5 transition-transform" />
+                      <ChevronDown className="w-4 h-4 text-[#344E41] stroke-[1.5] rotate-180 group-hover:-translate-y-0.5 transition-transform" />
                     </button>
                   </div>
                 </div>

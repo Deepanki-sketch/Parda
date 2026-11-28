@@ -33,6 +33,10 @@ export default function HospitalPortal({
   claimSettled,
   hospitalBalanceEth = 14.20,
   onSettleClaim,
+  onSubmitClaimToInsurer,
+  pendingClaims = [],
+  settledClaims = [],
+  activeHospitalSession,
   isBreakGlassActive,
   breakGlassReason,
   onTriggerBreakGlass,
@@ -43,7 +47,7 @@ export default function HospitalPortal({
 }) {
   const activePatient = currentPatient || MOCK_PATIENT;
   const [claimAmount, setClaimAmount] = useState('1.5');
-  const [hospitalPayeeAddress, setHospitalPayeeAddress] = useState('');
+  const [hospitalPayeeAddress, setHospitalPayeeAddress] = useState(activeHospitalSession?.address || '');
   const [isProving, setIsProving] = useState(false);
   const [proverStep, setProverStep] = useState(0);
   const [proofGenerated, setProofGenerated] = useState(false);
@@ -53,9 +57,15 @@ export default function HospitalPortal({
 
   // On-Chain vs Instant Mode Toggle
   const [settlementMode, setSettlementMode] = useState('sepolia'); // 'sepolia' | 'simulation'
-  const [onChainStep, setOnChainStep] = useState(''); // 'generating' | 'broadcasting' | 'mining' | 'settled' | 'error'
+  const [onChainStep, setOnChainStep] = useState(''); // 'generating' | 'broadcasting' | 'mining' | 'settled' | 'transmitted' | 'error'
   const [txHash, setTxHash] = useState('');
   const [onChainError, setOnChainError] = useState('');
+
+  // Settlement status for THIS active claim submission
+  const isSettledOnChain = Boolean(txHash) && onChainStep === 'settled';
+  const isSimulatedSettled = onChainStep === 'settled' && !txHash;
+  const isThisClaimSettled = isSettledOnChain || isSimulatedSettled;
+  const activeTxHash = txHash || '';
 
   // Emergency Trauma Break-Glass Modal State
   const [showBreakGlassModal, setShowBreakGlassModal] = useState(false);
@@ -120,6 +130,48 @@ export default function HospitalPortal({
         }, stepInterval);
       }, stepInterval);
     }, stepInterval);
+  };
+
+  // Submit ZKP Claim to Insurer (HealthShield Mutual) Queue
+  const handleSubmitClaimToInsurer = () => {
+    const numClaimAmount = parseFloat(claimAmount) || 1.5;
+    const spentNullifier = nullifier || ("0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+
+    let targetPayee = (hospitalPayeeAddress || '').trim();
+    let safePayee = targetPayee && ethers.isAddress(targetPayee)
+      ? targetPayee
+      : (activeHospitalSession?.address || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8');
+
+    const newClaim = {
+      id: `claim-${Date.now()}`,
+      hospitalName: activeHospitalSession?.name || 'St. Jude Medical Center',
+      hospitalLicense: activeHospitalSession?.licenseNo || 'LIC-NY-2024-8849',
+      hospitalAddress: safePayee,
+      amountEth: numClaimAmount,
+      amountInr: Math.round(numClaimAmount * INR_PER_ETH),
+      nullifier: spentNullifier,
+      procedureCode: '99213',
+      procedureName: 'Outpatient Evaluation & Management (20-29 min)',
+      status: 'PENDING_INSURER_SETTLEMENT',
+      submittedAt: new Date().toLocaleTimeString(),
+      merkleRoot: deployedConfig.hospitalMerkleRoot || '0x08581786b454cf726808eca1e5bddfbb948f741cd5ae3d89b6c65f3aeda1da7b',
+    };
+
+    setClaimSubmitted(true);
+    setOnChainStep('transmitted');
+
+    if (onSubmitClaimToInsurer) {
+      onSubmitClaimToInsurer(newClaim);
+    }
+
+    if (addAuditLog) {
+      addAuditLog({
+        type: 'CLAIM_SUBMITTED_TO_INSURER',
+        title: `ZKP Claim Transmitted to HealthShield Mutual (${numClaimAmount} ETH)`,
+        detail: `Hospital ${newClaim.hospitalName} submitted Groth16 proof. Nullifier ${spentNullifier.slice(0, 16)}... | Awaiting insurer settlement via MetaMask`,
+        time: new Date().toLocaleTimeString(),
+      });
+    }
   };
 
   // Instant Local Simulation Settlement
@@ -674,29 +726,32 @@ export default function HospitalPortal({
 
                   {!claimSubmitted ? (
                     <div className="space-y-2">
-                      {settlementMode === 'sepolia' ? (
+                      {/* Primary Action: Direct On-Chain Settlement via MetaMask */}
+                      <button
+                        type="button"
+                        onClick={handleOnChainSettlement}
+                        disabled={onChainStep === 'generating' || onChainStep === 'broadcasting' || onChainStep === 'mining'}
+                        className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
+                      >
+                        <Send className="w-4 h-4 text-brass-400" />
+                        <span>
+                          {onChainStep === 'generating' && "1. Generating ZKP Payload..."}
+                          {onChainStep === 'broadcasting' && "2. Broadcasting to Sepolia via MetaMask..."}
+                          {onChainStep === 'mining' && "3. Mining Block on Sepolia..."}
+                          {(!onChainStep || onChainStep === 'error') && `Submit ${claimAmount} ETH Claim via MetaMask (Sepolia)`}
+                        </span>
+                      </button>
+
+                      {/* Forward to Insurer Approval Queue option */}
+                      <div className="pt-1">
                         <button
-                          onClick={handleOnChainSettlement}
-                          disabled={onChainStep === 'generating' || onChainStep === 'broadcasting' || onChainStep === 'mining'}
-                          className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer shadow-md"
+                          type="button"
+                          onClick={handleSubmitClaimToInsurer}
+                          className="w-full py-2 rounded bg-forest-850 hover:bg-forest-800 border border-sage-500/25 text-sage-muted hover:text-ivory-200 text-[11px] font-mono transition-colors flex items-center justify-center space-x-1.5 cursor-pointer"
                         >
-                          <Send className="w-4 h-4 text-brass-400" />
-                          <span>
-                            {onChainStep === 'generating' && "1. Generating ZKP Payload..."}
-                            {onChainStep === 'broadcasting' && "2. Broadcasting to Sepolia via MetaMask..."}
-                            {onChainStep === 'mining' && "3. Mining Block on Sepolia..."}
-                            {(!onChainStep || onChainStep === 'error') && `Submit ${claimAmount} ETH Claim via MetaMask (Sepolia)`}
-                          </span>
+                          <span>Or Forward ZKP to Insurer Approval Queue (HealthShield)</span>
                         </button>
-                      ) : (
-                        <button
-                          onClick={executeInstantSimulation}
-                          className="btn-brass btn-pressable w-full flex items-center justify-center space-x-2 font-mono text-xs font-semibold py-3 rounded cursor-pointer"
-                        >
-                          <Send className="w-4 h-4 text-brass-400" />
-                          <span>Submit Proof (Instant Demo Simulation)</span>
-                        </button>
-                      )}
+                      </div>
 
                       {/* Fail-safe Error Fallback Option */}
                       {onChainStep === 'error' && (
@@ -714,22 +769,53 @@ export default function HospitalPortal({
                         </div>
                       )}
                     </div>
+                  ) : onChainStep === 'transmitted' ? (
+                    /* Awaiting Insurer Settlement Banner */
+                    <div className="space-y-3 font-mono">
+                      <div className="bg-amber-950/70 border border-amber-500/40 rounded-xl p-4 text-center space-y-2 text-xs">
+                        <div className="text-amber-300 font-bold flex items-center justify-center space-x-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                          <span>ZKP CLAIM TRANSMITTED TO INSURER!</span>
+                        </div>
+                        <div className="text-sage-muted text-[11px]">
+                          Claim of {claimAmount} ETH (₹{claimInr.toLocaleString('en-IN')}) with Groth16 proof is waiting in HealthShield Mutual's queue.
+                        </div>
+                        <div className="text-[10px] text-amber-400/90 pt-1 border-t border-amber-500/20">
+                          💡 Log into the <span className="font-bold underline cursor-pointer" onClick={() => setActiveRole && setActiveRole('insurer')}>Insurer Portal</span> to approve and trigger MetaMask settlement.
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={executeInstantSimulation}
+                        className="w-full py-2 rounded bg-forest-850 hover:bg-forest-800 border border-sage-500/30 text-sage-muted hover:text-ivory-200 text-xs font-mono transition-colors cursor-pointer"
+                      >
+                        ⚡ Simulate Instant Insurer Approval (Demo)
+                      </button>
+
+                      <button
+                        onClick={handleResetClaimForm}
+                        className="w-full flex items-center justify-center space-x-2 bg-forest-850 hover:bg-forest-800 border border-brass-500/40 text-brass-300 hover:text-ivory-200 font-mono text-xs font-medium py-2 rounded transition-all cursor-pointer shadow-sm"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-brass-400" />
+                        <span>Submit Another Claim</span>
+                      </button>
+                    </div>
                   ) : (
                     /* Breakthrough Success Banner + Sequential Claim Reset Button */
                     <div className="space-y-3">
-                      <div className="bg-emerald-950/70 rounded p-4 text-center space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
+                      <div className="bg-emerald-950/70 rounded-xl p-4 text-center space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                         <div className="text-emerald-300 font-bold flex items-center justify-center space-x-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                           <span>CLAIM SETTLED ON-CHAIN!</span>
                         </div>
                         <div className="text-[#AEB8AA] text-[11px]">
-                          Payout of {claimAmount} ETH (₹{claimInr.toLocaleString('en-IN')}) autonomously released to Hospital Treasury.
+                          Payout of {claimAmount} ETH (₹{(parseFloat(claimAmount) * INR_PER_ETH).toLocaleString('en-IN')}) autonomously released to Hospital Treasury.
                         </div>
 
-                        {txHash && (
+                        {activeTxHash && (
                           <div className="pt-2 border-t border-emerald-500/20">
                             <a
-                              href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                              href={`https://sepolia.etherscan.io/tx/${activeTxHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center space-x-1.5 text-xs text-[#B99561] hover:text-[#c9a674] underline underline-offset-4"
@@ -899,25 +985,25 @@ export default function HospitalPortal({
                 }}
               >
                 <div className="flex items-center justify-between font-sans font-medium text-xs">
-                  <span className="flex items-center gap-1.5 font-bold" style={{ color: '#8C652D' }}>
-                    <Server className="w-3.5 h-3.5" style={{ color: '#8C652D', stroke: '#8C652D' }} />
+                  <span className="flex items-center gap-1.5 font-bold text-[#344E41]" style={{ color: '#344E41' }}>
+                    <Server className="w-3.5 h-3.5 text-[#344E41]" style={{ color: '#344E41', stroke: '#344E41' }} />
                     <span>Enclave Proof Telemetry</span>
                   </span>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(185, 149, 97, 0.20)', borderColor: 'rgba(185, 149, 97, 0.50)', color: '#7A5522' }}>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border" style={{ backgroundColor: 'rgba(52, 78, 65, 0.10)', borderColor: 'rgba(52, 78, 65, 0.35)', color: '#344E41' }}>
                     Groth16 (BN254)
                   </span>
                 </div>
-                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
+                <div className="flex justify-between text-[11px] font-medium" style={{ color: '#344E41' }}>
                   <span>Circuit Constraints:</span>
-                  <span className="font-semibold" style={{ color: '#2B2319' }}>14,208 R1CS</span>
+                  <span className="font-bold text-[#1B2E24]" style={{ color: '#1B2E24' }}>14,208 R1CS</span>
                 </div>
-                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
+                <div className="flex justify-between text-[11px] font-medium" style={{ color: '#344E41' }}>
                   <span>On-Chain Gas:</span>
-                  <span className="font-semibold" style={{ color: '#2B2319' }}>~214,000 gas (EVM Pairing)</span>
+                  <span className="font-bold text-[#1B2E24]" style={{ color: '#1B2E24' }}>~214,000 gas (EVM Pairing)</span>
                 </div>
-                <div className="flex justify-between text-[11px]" style={{ color: '#5C4A32' }}>
+                <div className="flex justify-between text-[11px] font-medium" style={{ color: '#344E41' }}>
                   <span>Enclave Shield:</span>
-                  <span className="font-bold" style={{ color: '#8C652D' }}>Zero Clinical Leakage</span>
+                  <span className="font-bold text-[#344E41]" style={{ color: '#344E41' }}>Zero Clinical Leakage</span>
                 </div>
               </div>
 

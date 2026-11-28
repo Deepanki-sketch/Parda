@@ -223,34 +223,29 @@ export default function AddHealthRecordModal({
             <div 
               className="w-9 h-9 rounded-xl flex items-center justify-center border"
               style={{
-                background: 'rgba(185, 149, 97, 0.20)',
-                borderColor: '#9E7C4B',
-                color: '#8C652D'
+                background: 'rgba(52, 78, 65, 0.10)',
+                borderColor: '#344E41',
+                color: '#344E41'
               }}
             >
-              <FolderPlus className="w-5 h-5 text-[#9E7C4B]" />
+              <FolderPlus className="w-5 h-5 text-[#344E41]" />
             </div>
             <div>
               <h2 
-                className="text-lg font-serif font-bold tracking-tight"
-                style={{
-                  background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 50%, #B99561 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  color: '#8C652D'
-                }}
+                className="text-lg font-serif font-bold tracking-tight text-[#344E41]"
+                style={{ color: '#344E41' }}
               >
                 Add Medical Files & Update Vault
               </h2>
-              <p className="text-xs font-mono mt-0.5" style={{ color: 'rgba(140, 101, 45, 0.85)' }}>
-                Patient: <span className="font-bold" style={{ color: '#7A5522' }}>{currentPatient?.name}</span> • Client-Side AES-256-GCM
+              <p className="text-xs font-mono mt-0.5 text-[#344E41]" style={{ color: '#344E41' }}>
+                Patient: <span className="font-bold text-[#344E41]">{currentPatient?.name}</span> • Client-Side AES-256-GCM
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-[#9E7C4B] hover:text-[#7A5522] hover:bg-[#9E7C4B]/15 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-[#344E41] hover:text-[#1F352B] hover:bg-[#344E41]/10 transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-5 h-5" />
@@ -269,36 +264,36 @@ export default function AddHealthRecordModal({
             onClick={() => { setActiveTab('files'); setErrorMessage(''); setStatusMessage(''); }}
             className={`px-4 py-2 text-xs font-medium border-b-2 transition-all flex items-center space-x-1.5 cursor-pointer ${
               activeTab === 'files'
-                ? 'border-[#9E7C4B] bg-[#9E7C4B]/20 font-bold'
-                : 'border-transparent hover:bg-[#9E7C4B]/10'
+                ? 'border-[#344E41] bg-[#344E41]/10 font-bold'
+                : 'border-transparent hover:bg-[#344E41]/5'
             }`}
-            style={{ color: activeTab === 'files' ? '#7A5522' : 'rgba(140, 101, 45, 0.85)' }}
+            style={{ color: activeTab === 'files' ? '#344E41' : 'rgba(52, 78, 65, 0.75)' }}
           >
-            <Upload className="w-3.5 h-3.5 text-[#9E7C4B]" />
+            <Upload className="w-3.5 h-3.5 text-[#344E41]" />
             <span>Upload Medical Files ({attachedFiles.length})</span>
           </button>
           <button
             onClick={() => { setActiveTab('clinical'); setErrorMessage(''); setStatusMessage(''); }}
             className={`px-4 py-2 text-xs font-medium border-b-2 transition-all flex items-center space-x-1.5 cursor-pointer ${
               activeTab === 'clinical'
-                ? 'border-[#9E7C4B] bg-[#9E7C4B]/20 font-bold'
-                : 'border-transparent hover:bg-[#9E7C4B]/10'
+                ? 'border-[#344E41] bg-[#344E41]/10 font-bold'
+                : 'border-transparent hover:bg-[#344E41]/5'
             }`}
-            style={{ color: activeTab === 'clinical' ? '#7A5522' : 'rgba(140, 101, 45, 0.85)' }}
+            style={{ color: activeTab === 'clinical' ? '#344E41' : 'rgba(52, 78, 65, 0.75)' }}
           >
-            <HeartPulse className="w-3.5 h-3.5 text-[#9E7C4B]" />
+            <HeartPulse className="w-3.5 h-3.5 text-[#344E41]" />
             <span>Diagnosis & Conditions</span>
           </button>
           <button
             onClick={() => { setActiveTab('prescriptions'); setErrorMessage(''); setStatusMessage(''); }}
             className={`px-4 py-2 text-xs font-medium border-b-2 transition-all flex items-center space-x-1.5 cursor-pointer ${
               activeTab === 'prescriptions'
-                ? 'border-[#9E7C4B] bg-[#9E7C4B]/20 font-bold'
-                : 'border-transparent hover:bg-[#9E7C4B]/10'
+                ? 'border-[#344E41] bg-[#344E41]/10 font-bold'
+                : 'border-transparent hover:bg-[#344E41]/5'
             }`}
-            style={{ color: activeTab === 'prescriptions' ? '#7A5522' : 'rgba(140, 101, 45, 0.85)' }}
+            style={{ color: activeTab === 'prescriptions' ? '#344E41' : 'rgba(52, 78, 65, 0.75)' }}
           >
-            <FileText className="w-3.5 h-3.5 text-[#9E7C4B]" />
+            <FileText className="w-3.5 h-3.5 text-[#344E41]" />
             <span>Prescriptions & Allergies</span>
           </button>
         </div>
@@ -325,24 +320,19 @@ export default function AddHealthRecordModal({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label 
-                    className="block text-xs font-mono mb-1 font-semibold"
-                    style={{
-                      background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      color: 'rgba(140, 101, 45, 0.95)'
-                    }}
+                    className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                    style={{ color: '#344E41' }}
                   >
                     Document Category
                   </label>
                   <select
                     value={fileCategory}
                     onChange={(e) => setFileCategory(e.target.value)}
-                    className="w-full rounded px-2.5 py-1.5 text-xs font-medium focus:outline-none"
+                    className="w-full rounded px-2.5 py-1.5 text-xs font-semibold focus:outline-none"
                     style={{
                       background: '#FAF7F2',
-                      border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                      color: '#7A5522'
+                      border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                      color: '#344E41'
                     }}
                   >
                     <option value="Diagnostic Report">Diagnostic Report</option>
@@ -357,31 +347,26 @@ export default function AddHealthRecordModal({
 
                 <div className="sm:col-span-2">
                   <label 
-                    className="block text-xs font-mono mb-1 font-semibold"
-                    style={{
-                      background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      color: 'rgba(140, 101, 45, 0.95)'
-                    }}
+                    className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                    style={{ color: '#344E41' }}
                   >
                     Select File to Encrypt
                   </label>
                   <label 
                     className="flex items-center justify-between px-3 py-1.5 rounded cursor-pointer transition-colors"
                     style={{
-                      background: 'rgba(185, 149, 97, 0.12)',
-                      border: '1.5px dashed #9E7C4B'
+                      background: 'rgba(52, 78, 65, 0.06)',
+                      border: '1.5px dashed #344E41'
                     }}
                   >
-                    <span className="text-xs truncate max-w-[240px]" style={{ color: '#7A5522' }}>
+                    <span className="text-xs truncate max-w-[240px] font-medium" style={{ color: '#344E41' }}>
                       {selectedFile ? selectedFile.name : 'Choose PDF, Scan, or Lab Report...'}
                     </span>
                     <span 
                       className="px-2 py-0.5 rounded text-[10px] font-mono font-bold"
                       style={{
-                        background: 'rgba(185, 149, 97, 0.25)',
-                        color: '#7A5522'
+                        background: 'rgba(52, 78, 65, 0.15)',
+                        color: '#344E41'
                       }}
                     >
                       Browse
@@ -398,13 +383,8 @@ export default function AddHealthRecordModal({
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Clinical Notes / Context (Optional)
                 </label>
@@ -413,32 +393,32 @@ export default function AddHealthRecordModal({
                   value={fileNotes}
                   onChange={(e) => setFileNotes(e.target.value)}
                   placeholder="e.g. Follow-up report from Dr. Jenkins, blood pressure reading"
-                  className="w-full rounded px-3 py-1.5 text-xs focus:outline-none"
+                  className="w-full rounded px-3 py-1.5 text-xs font-medium focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
 
               <div className="flex items-center justify-between pt-1">
                 <div 
-                  className="text-[11px] font-mono flex items-center gap-1.5"
-                  style={{ color: 'rgba(140, 101, 45, 0.90)' }}
+                  className="text-[11px] font-mono flex items-center gap-1.5 font-medium"
+                  style={{ color: '#344E41' }}
                 >
-                  <Lock className="w-3.5 h-3.5 text-[#9E7C4B]" />
+                  <Lock className="w-3.5 h-3.5 text-[#344E41]" />
                   <span>Encrypted via WebCrypto AES-256 before leaving browser</span>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isProcessing || !selectedFile}
-                  className="px-4 py-2 rounded-xl font-medium text-xs flex items-center space-x-1.5 shadow-sm disabled:opacity-50 cursor-pointer transition-all"
+                  className="px-4 py-2 rounded-xl font-semibold text-xs flex items-center space-x-1.5 shadow-sm disabled:opacity-50 cursor-pointer transition-all text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #9E7C4B 0%, #7A5522 100%)',
+                    background: '#344E41',
                     color: '#FAF7F2',
-                    boxShadow: '0 2px 8px rgba(158, 124, 75, 0.3)'
+                    boxShadow: '0 2px 8px rgba(52, 78, 65, 0.3)'
                   }}
                 >
                   {isProcessing ? (
@@ -456,25 +436,20 @@ export default function AddHealthRecordModal({
             {/* List of currently attached files */}
             <div className="pt-3 border-t space-y-2" style={{ borderColor: 'rgba(158, 124, 75, 0.25)' }}>
               <div 
-                className="text-xs font-mono flex justify-between items-center font-semibold"
-                style={{
-                  background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  color: 'rgba(140, 101, 45, 0.95)'
-                }}
+                className="text-xs font-mono flex justify-between items-center font-bold text-[#344E41]"
+                style={{ color: '#344E41' }}
               >
                 <span>Existing Encrypted Vault Documents ({attachedFiles.length})</span>
-                <span className="text-[10px] text-[#9E7C4B]">SHA-256 Integrity Anchored</span>
+                <span className="text-[10px] text-[#344E41] font-semibold">SHA-256 Integrity Anchored</span>
               </div>
 
               {attachedFiles.length === 0 ? (
                 <div 
-                  className="p-4 rounded-xl border text-center text-xs italic"
+                  className="p-4 rounded-xl border text-center text-xs italic font-medium"
                   style={{
-                    background: 'rgba(185, 149, 97, 0.10)',
-                    borderColor: 'rgba(158, 124, 75, 0.25)',
-                    color: 'rgba(140, 101, 45, 0.85)'
+                    background: 'rgba(52, 78, 65, 0.05)',
+                    borderColor: 'rgba(52, 78, 65, 0.20)',
+                    color: '#344E41'
                   }}
                 >
                   No medical documents attached yet.
@@ -486,37 +461,32 @@ export default function AddHealthRecordModal({
                       key={doc.id}
                       className="p-3 rounded-xl border flex items-center justify-between gap-3 text-xs"
                       style={{
-                        background: 'rgba(185, 149, 97, 0.14)',
-                        borderColor: 'rgba(158, 124, 75, 0.35)'
+                        background: 'rgba(52, 78, 65, 0.06)',
+                        borderColor: 'rgba(52, 78, 65, 0.25)'
                       }}
                     >
                       <div className="flex items-start space-x-2.5 min-w-0">
-                        <FileCheck className="w-4 h-4 text-[#9E7C4B] shrink-0 mt-0.5" />
+                        <FileCheck className="w-4 h-4 text-[#344E41] shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <div 
-                            className="font-medium truncate"
-                            style={{
-                              background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              color: 'rgba(140, 101, 45, 0.95)'
-                            }}
+                            className="font-semibold truncate text-[#344E41]"
+                            style={{ color: '#344E41' }}
                           >
                             {doc.name}
                           </div>
                           <div 
-                            className="text-[10px] font-mono flex flex-wrap items-center gap-2 mt-0.5"
-                            style={{ color: 'rgba(140, 101, 45, 0.88)' }}
+                            className="text-[10px] font-mono flex flex-wrap items-center gap-2 mt-0.5 text-[#344E41]"
+                            style={{ color: '#344E41' }}
                           >
-                            <span className="font-semibold text-[#8C652D]">{doc.category}</span>
+                            <span className="font-bold text-[#344E41]">{doc.category}</span>
                             <span>•</span>
                             <span>{doc.sizeFormatted}</span>
                             <span>•</span>
                             <span>Uploaded {doc.uploadDate}</span>
                           </div>
                           <div 
-                            className="text-[10px] font-mono truncate mt-0.5"
-                            style={{ color: 'rgba(140, 101, 45, 0.70)' }}
+                            className="text-[10px] font-mono truncate mt-0.5 opacity-80"
+                            style={{ color: '#344E41' }}
                           >
                             Hash: {doc.fileHash}
                           </div>
@@ -526,7 +496,7 @@ export default function AddHealthRecordModal({
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(doc.id, doc.name)}
-                        className="text-[#9E7C4B] hover:text-rose-500 p-1 rounded transition-colors shrink-0 cursor-pointer"
+                        className="text-[#344E41] hover:text-rose-600 p-1 rounded transition-colors shrink-0 cursor-pointer"
                         title="Remove document from vault"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -545,13 +515,8 @@ export default function AddHealthRecordModal({
             <form onSubmit={handleClinicalSubmit} className="space-y-4">
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   ICD-10 Diagnostic Code
                 </label>
@@ -563,21 +528,16 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm font-mono focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Clinical Diagnosis Display
                 </label>
@@ -589,21 +549,16 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Severity Level
                 </label>
@@ -613,8 +568,8 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 >
                   <option value="Mild">Mild</option>
@@ -627,13 +582,8 @@ export default function AddHealthRecordModal({
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Clinical Notes / History
                 </label>
@@ -644,8 +594,8 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-xs focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
@@ -654,11 +604,11 @@ export default function AddHealthRecordModal({
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-4 py-2 rounded-xl font-medium text-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-4 py-2 rounded-xl font-semibold text-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 transition-all text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #9E7C4B 0%, #7A5522 100%)',
+                    background: '#344E41',
                     color: '#FAF7F2',
-                    boxShadow: '0 2px 8px rgba(158, 124, 75, 0.3)'
+                    boxShadow: '0 2px 8px rgba(52, 78, 65, 0.3)'
                   }}
                 >
                   {isProcessing ? (
@@ -681,13 +631,8 @@ export default function AddHealthRecordModal({
             <form onSubmit={handlePrescriptionSubmit} className="space-y-4">
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Medication & Strength
                 </label>
@@ -700,21 +645,16 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Dosage Instructions
                 </label>
@@ -727,21 +667,16 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Allowed Refills
                 </label>
@@ -754,21 +689,16 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm font-mono focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
 
               <div>
                 <label 
-                  className="block text-xs font-mono mb-1 font-semibold"
-                  style={{
-                    background: 'linear-gradient(135deg, #7A5522 0%, #9E7C4B 60%, #B99561 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    color: 'rgba(140, 101, 45, 0.95)'
-                  }}
+                  className="block text-xs font-mono mb-1 font-bold text-[#344E41]"
+                  style={{ color: '#344E41' }}
                 >
                   Drug Allergies (Critical Trauma Warning)
                 </label>
@@ -780,8 +710,8 @@ export default function AddHealthRecordModal({
                   className="w-full rounded px-3 py-2 text-sm focus:outline-none"
                   style={{
                     background: '#FAF7F2',
-                    border: '1.5px solid rgba(158, 124, 75, 0.45)',
-                    color: '#7A5522'
+                    border: '1.5px solid rgba(52, 78, 65, 0.40)',
+                    color: '#344E41'
                   }}
                 />
               </div>
@@ -790,11 +720,11 @@ export default function AddHealthRecordModal({
                 <button
                   type="submit"
                   disabled={isProcessing}
-                  className="px-4 py-2 rounded-xl font-medium text-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 transition-all"
+                  className="px-4 py-2 rounded-xl font-semibold text-xs flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 transition-all text-white"
                   style={{
-                    background: 'linear-gradient(135deg, #9E7C4B 0%, #7A5522 100%)',
+                    background: '#344E41',
                     color: '#FAF7F2',
-                    boxShadow: '0 2px 8px rgba(158, 124, 75, 0.3)'
+                    boxShadow: '0 2px 8px rgba(52, 78, 65, 0.3)'
                   }}
                 >
                   {isProcessing ? (
