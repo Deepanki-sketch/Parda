@@ -187,11 +187,15 @@ export default function InsurerPortal({
         finalTxHash = tx.hash;
       }
 
-      setSettlingStep('mining');
-      await new Promise((r) => setTimeout(r, 1200));
-
       setSettledSuccessTx(finalTxHash);
       setSettlingStep('done');
+
+      const auditEntry = {
+        type: 'CLAIM_SETTLED_BY_INSURER',
+        title: `Claim Settled via Insurer MetaMask (${numClaimAmount} ETH)`,
+        detail: `Insurer accepted ZKP proof. Disbursed ${numClaimAmount} ETH to ${claim.hospitalName} (${payoutAddress.slice(0, 8)}...) | Tx: ${finalTxHash.slice(0, 16)}...`,
+        time: new Date().toLocaleTimeString(),
+      };
 
       if (onAcceptAndSettleClaim) {
         onAcceptAndSettleClaim({
@@ -199,16 +203,10 @@ export default function InsurerPortal({
           amountEth: numClaimAmount,
           txHash: finalTxHash,
           settledBy: account,
+          auditLog: auditEntry,
         });
-      }
-
-      if (addAuditLog) {
-        addAuditLog({
-          type: 'CLAIM_SETTLED_BY_INSURER',
-          title: `Claim Settled via Insurer MetaMask (${numClaimAmount} ETH)`,
-          detail: `Insurer accepted ZKP proof. Disbursed ${numClaimAmount} ETH to ${claim.hospitalName} (${payoutAddress.slice(0, 8)}...) | Tx: ${finalTxHash.slice(0, 16)}...`,
-          time: new Date().toLocaleTimeString(),
-        });
+      } else if (addAuditLog) {
+        addAuditLog(auditEntry);
       }
     } catch (err) {
       console.warn("Insurer settlement failed:", err);
@@ -225,25 +223,27 @@ export default function InsurerPortal({
   const handleSimulateInstantSettlement = (claim) => {
     const numClaimAmount = parseFloat(claim.amountEth) || 1.5;
     const fakeTx = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('');
-    
+
+    const auditEntry = {
+      type: 'CLAIM_SETTLED_SIMULATION',
+      title: `Claim Settled (Instant Simulation: ${numClaimAmount} ETH)`,
+      detail: `Disbursed ${numClaimAmount} ETH to ${claim.hospitalName} treasury. Nullifier ${claim.nullifier?.slice(0, 16)}... marked spent.`,
+      time: new Date().toLocaleTimeString(),
+    };
+
     if (onAcceptAndSettleClaim) {
       onAcceptAndSettleClaim({
         ...claim,
         amountEth: numClaimAmount,
         txHash: fakeTx,
         settledBy: account || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+        auditLog: auditEntry,
       });
+    } else if (addAuditLog) {
+      addAuditLog(auditEntry);
     }
 
-    if (addAuditLog) {
-      addAuditLog({
-        type: 'CLAIM_SETTLED_SIMULATION',
-        title: `Claim Settled (Instant Simulation: ${numClaimAmount} ETH)`,
-        detail: `Disbursed ${numClaimAmount} ETH to ${claim.hospitalName} treasury. Nullifier ${claim.nullifier?.slice(0, 16)}... marked spent.`,
-        time: new Date().toLocaleTimeString(),
-      });
-    }
-
+    setSettledSuccessTx(fakeTx);
     setSettlingClaimId(null);
     setSettlingStep('');
   };

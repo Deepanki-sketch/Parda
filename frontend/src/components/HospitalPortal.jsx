@@ -272,17 +272,17 @@ export default function HospitalPortal({
     setClaimSubmitted(true);
     setOnChainStep('transmitted');
 
-    if (onSubmitClaimToInsurer) {
-      onSubmitClaimToInsurer(newClaim);
-    }
+    const submitAudit = {
+      type: 'CLAIM_SUBMITTED_TO_INSURER',
+      title: `ZKP Claim Transmitted to HealthShield Mutual (${numClaimAmount} ETH)`,
+      detail: `Hospital ${newClaim.hospitalName} submitted Groth16 proof. Nullifier ${spentNullifier.slice(0, 16)}... | Awaiting insurer settlement via MetaMask`,
+      time: new Date().toLocaleTimeString(),
+    };
 
-    if (addAuditLog) {
-      addAuditLog({
-        type: 'CLAIM_SUBMITTED_TO_INSURER',
-        title: `ZKP Claim Transmitted to HealthShield Mutual (${numClaimAmount} ETH)`,
-        detail: `Hospital ${newClaim.hospitalName} submitted Groth16 proof. Nullifier ${spentNullifier.slice(0, 16)}... | Awaiting insurer settlement via MetaMask`,
-        time: new Date().toLocaleTimeString(),
-      });
+    if (onSubmitClaimToInsurer) {
+      onSubmitClaimToInsurer({ ...newClaim, auditLog: submitAudit });
+    } else if (addAuditLog) {
+      addAuditLog(submitAudit);
     }
   };
 
@@ -294,23 +294,25 @@ export default function HospitalPortal({
 
     const numClaimAmount = parseFloat(claimAmount) || 1.5;
     const spentNullifier = nullifier || ("0x" + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join(''));
+    const hospName = activeHospitalSession?.name || 'St. Jude Medical Center';
+    const settleAudit = {
+      type: 'CLAIM_SETTLED',
+      title: 'Claim Verified & Settled via ClaimManager.sol',
+      detail: `Transferred ${numClaimAmount} ETH (₹${(numClaimAmount * INR_PER_ETH).toLocaleString('en-IN')}) to ${hospName} Treasury | Nullifier ${spentNullifier.slice(0, 16)}... marked spent on-chain`,
+      time: new Date().toLocaleTimeString(),
+    };
 
     if (onSettleClaim) {
       onSettleClaim({
+        id: submittedClaimId || undefined,
         amountEth: numClaimAmount,
         nullifier: spentNullifier,
-        hospitalName: 'St. Jude Medical Center',
-        payee: '0x7099...79C8 (St. Jude)',
+        hospitalName: hospName,
+        payee: activeHospitalSession?.address || '0x7099...79C8 (St. Jude)',
+        auditLog: settleAudit,
       });
-    }
-
-    if (addAuditLog) {
-      addAuditLog({
-        type: 'CLAIM_SETTLED',
-        title: 'Claim Verified & Settled via ClaimManager.sol',
-        detail: `Transferred ${numClaimAmount} ETH (₹${(numClaimAmount * INR_PER_ETH).toLocaleString('en-IN')}) to St. Jude Medical Treasury | Nullifier ${spentNullifier.slice(0, 16)}... marked spent on-chain`,
-        time: new Date().toLocaleTimeString(),
-      });
+    } else if (addAuditLog) {
+      addAuditLog(settleAudit);
     }
   };
 
@@ -378,30 +380,27 @@ export default function HospitalPortal({
       }
 
       setTxHash(finalTxHash);
-      setOnChainStep('mining');
-
-      await new Promise((r) => setTimeout(r, 1200));
-
       setOnChainStep('settled');
       setClaimSubmitted(true);
+
+      const settleAudit = {
+        type: 'CLAIM_SETTLED_SEPOLIA',
+        title: 'Claim Settled on Ethereum Sepolia Testnet',
+        detail: `Transferred ${numClaimAmount} ETH to ${safePayee.slice(0, 8)}... | Tx: ${finalTxHash.slice(0, 16)}...`,
+        time: new Date().toLocaleTimeString(),
+      };
 
       if (onSettleClaim) {
         onSettleClaim({
           amountEth: numClaimAmount,
           nullifier: spentNullifier,
-          hospitalName: 'St. Jude Medical Center',
+          hospitalName: activeHospitalSession?.name || 'St. Jude Medical Center',
           payee: safePayee,
           txHash: finalTxHash,
+          auditLog: settleAudit,
         });
-      }
-
-      if (addAuditLog) {
-        addAuditLog({
-          type: 'CLAIM_SETTLED_SEPOLIA',
-          title: 'Claim Settled on Ethereum Sepolia Testnet',
-          detail: `Transferred ${numClaimAmount} ETH to ${safePayee.slice(0, 8)}... | Tx: ${finalTxHash.slice(0, 16)}...`,
-          time: new Date().toLocaleTimeString(),
-        });
+      } else if (addAuditLog) {
+        addAuditLog(settleAudit);
       }
     } catch (err) {
       console.warn("Sepolia claim failed:", err);
@@ -541,6 +540,34 @@ export default function HospitalPortal({
           </div>
         </div>
       </div>
+
+      {/* Live Insurer Payout Confirmed Banner (syncs instantaneously across portals) */}
+      {claimSettled && settledClaims[0] && (
+        <div className="p-4 rounded bg-emerald-950/40 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono animate-in fade-in">
+          <div className="flex items-center space-x-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <div>
+              <div className="text-emerald-300 font-bold">
+                PAYMENT RECEIVED FROM INSURER ({Number(settledClaims[0].amountEth || 0)} ETH / ₹{Number(settledClaims[0].amountInr || 0).toLocaleString('en-IN')})
+              </div>
+              <div className="text-sage-muted text-[11px]">
+                Nullifier {settledClaims[0].nullifier?.slice(0, 14)}... verified • Treasury updated live
+              </div>
+            </div>
+          </div>
+          {settledClaims[0].txHash && (
+            <a
+              href={`https://sepolia.etherscan.io/tx/${settledClaims[0].txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-1 text-brass-400 hover:text-brass-300 underline shrink-0"
+            >
+              <span>View on Sepolia Etherscan</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
+        </div>
+      )}
 
       {!hasAccess ? (
         /* Permission Locked State with Emergency Break-Glass Option */

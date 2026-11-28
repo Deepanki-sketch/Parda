@@ -23,6 +23,7 @@ import {
   getSyncRoomId,
   getLocalCachedWorkflowState,
   fetchSyncedWorkflowState,
+  broadcastWorkflowStateImmediate,
   applyMergedCloudMutation,
   syncGrantUpsert,
   syncGrantRevoke,
@@ -190,13 +191,16 @@ export default function App() {
     syncHandleRef.current?.markLocalRevision?.(nextState);
 
     const channel = syncHandleRef.current?.channel || null;
+    // Push sub-second WebSocket broadcast immediately before awaiting REST persistence
+    broadcastWorkflowStateImmediate(nextState, syncRoomId, channel, eventTag);
+
     const promise = cloudWriter
       ? cloudWriter(nextState, syncRoomId, channel)
       : applyMergedCloudMutation(nextState, updater, syncRoomId, channel, eventTag);
 
     Promise.resolve(promise)
       .then((merged) => {
-        if (merged) {
+        if (merged && (Number(merged.seq) || 0) >= (Number(workflowRef.current?.seq) || 0)) {
           workflowRef.current = merged;
           setWorkflowState(merged);
           syncHandleRef.current?.markLocalRevision?.(merged);
@@ -350,11 +354,16 @@ export default function App() {
 
   // Hospital Submits ZKP Claim to Insurer Queue
   const handleSubmitClaimToInsurer = useCallback((claim) => {
+    const { auditLog, ...claimFields } = claim || {};
     commitWorkflowState(
       (prev) => ({
-        pendingClaims: [claim, ...(prev.pendingClaims || []).filter((c) => c.id !== claim.id)],
+        pendingClaims: [claimFields, ...(prev.pendingClaims || []).filter((c) => c.id !== claimFields.id)],
+        auditLogs: auditLog
+          ? [auditLog, ...(prev.auditLogs || [])].slice(0, 50)
+          : prev.auditLogs,
       }),
-      (nextState, room, channel) => syncClaimUpsert(claim, nextState, room, channel)
+      (nextState, room, channel) => syncClaimUpsert(claimFields, nextState, room, channel),
+      'claim_submitted'
     );
   }, [commitWorkflowState]);
 
@@ -362,6 +371,7 @@ export default function App() {
   const handleAcceptAndSettleClaim = useCallback((settledData) => {
     const numAmount = parseFloat(settledData.amountEth) || 1.5;
     const inrAmount = Math.round(numAmount * 10000);
+    const { auditLog } = settledData || {};
 
     const newClaim = {
       id: settledData.id || `claim-${Date.now()}`,
@@ -390,9 +400,13 @@ export default function App() {
           pendingClaims: (prev.pendingClaims || []).filter((c) => c.id !== settledData.id),
           settledClaims: [newClaim, ...(prev.settledClaims || []).filter((c) => c.id !== newClaim.id)],
           claimSettled: true,
+          auditLogs: auditLog
+            ? [auditLog, ...(prev.auditLogs || [])].slice(0, 50)
+            : prev.auditLogs,
         };
       },
-      (nextState, room, channel) => syncClaimUpsert(newClaim, nextState, room, channel)
+      (nextState, room, channel) => syncClaimUpsert(newClaim, nextState, room, channel),
+      'claim_settled'
     );
 
     return newClaim;
