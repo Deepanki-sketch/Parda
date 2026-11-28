@@ -17,6 +17,7 @@ import {
   getActiveRoleSession,
   setActiveRoleSession,
   clearActiveRoleSession,
+  DEMO_USERS,
   getPendingClaims,
   addPendingClaim,
   removePendingClaim,
@@ -54,6 +55,21 @@ export default function App() {
   const handleRoleChange = (role) => {
     if (ALLOWED_ROLES.includes(role)) {
       setActiveRoleState(role);
+
+      // Auto-ensure session exists for target role
+      if (['patient', 'hospital', 'insurer'].includes(role)) {
+        if (!activeRoleSession || activeRoleSession.role !== role) {
+          const userObj = DEMO_USERS[role] || DEMO_USERS.hospital;
+          const newSession = {
+            role,
+            user: userObj,
+            authenticatedAt: new Date().toISOString(),
+          };
+          setActiveRoleSessionState(newSession);
+          setActiveRoleSession(newSession);
+        }
+      }
+
       if (typeof window !== 'undefined') {
         const url = new URL(window.location.href);
         url.searchParams.set('role', role);
@@ -106,6 +122,22 @@ export default function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Ensure activeRoleSession matches activeRole when visiting directly via URL
+  useEffect(() => {
+    if (['patient', 'hospital', 'insurer'].includes(activeRole)) {
+      if (!activeRoleSession || activeRoleSession.role !== activeRole) {
+        const userObj = DEMO_USERS[activeRole] || DEMO_USERS.hospital;
+        const newSession = {
+          role: activeRole,
+          user: userObj,
+          authenticatedAt: new Date().toISOString(),
+        };
+        setActiveRoleSessionState(newSession);
+        setActiveRoleSession(newSession);
+      }
+    }
+  }, [activeRole]);
 
   // 7. Full-screen interactive intro sequence (?intro=1)
   const [showIntro, setShowIntro] = useState(() => {
@@ -314,8 +346,8 @@ export default function App() {
           />
         )}
 
-        {/* 2. DEDICATED PATIENT PORTAL: Only rendered when logged in as Patient */}
-        {activeRole === 'patient' && activeRoleSession?.role === 'patient' && (
+        {/* 2. DEDICATED PATIENT PORTAL */}
+        {activeRole === 'patient' && (
           <PatientPortal
             isEncrypted={isEncrypted}
             setIsEncrypted={setIsEncrypted}
@@ -336,8 +368,8 @@ export default function App() {
           />
         )}
 
-        {/* 3. DEDICATED HOSPITAL PORTAL: Only rendered when logged in as Hospital */}
-        {activeRole === 'hospital' && activeRoleSession?.role === 'hospital' && (
+        {/* 3. DEDICATED HOSPITAL PORTAL */}
+        {activeRole === 'hospital' && (
           <HospitalPortal
             doctorAccessGranted={doctorAccessGranted}
             claimSettled={claimSettled}
@@ -346,7 +378,7 @@ export default function App() {
             onSubmitClaimToInsurer={handleSubmitClaimToInsurer}
             pendingClaims={pendingClaims}
             settledClaims={settledClaims}
-            activeHospitalSession={activeRoleSession.user}
+            activeHospitalSession={activeRoleSession?.user || DEMO_USERS.hospital}
             isBreakGlassActive={isBreakGlassActive}
             breakGlassReason={breakGlassReason}
             onTriggerBreakGlass={handleTriggerBreakGlass}
@@ -357,8 +389,8 @@ export default function App() {
           />
         )}
 
-        {/* 4. DEDICATED INSURER PORTAL: Only rendered when logged in as Insurer */}
-        {activeRole === 'insurer' && activeRoleSession?.role === 'insurer' && (
+        {/* 4. DEDICATED INSURER PORTAL */}
+        {activeRole === 'insurer' && (
           <InsurerPortal
             claimSettled={claimSettled}
             poolBalanceEth={poolBalanceEth}
@@ -368,6 +400,7 @@ export default function App() {
             onAcceptAndSettleClaim={handleAcceptAndSettleClaim}
             auditLogs={auditLogs}
             addAuditLog={addAuditLog}
+            activeInsurerSession={activeRoleSession?.user || DEMO_USERS.insurer}
           />
         )}
 

@@ -55,16 +55,16 @@ export default function HospitalPortal({
   const [nullifier, setNullifier] = useState(null);
   const [showConstraintDetails, setShowConstraintDetails] = useState(false);
 
-  // Derive settlement status from incoming claims ledger or local state
-  const latestSettledClaim = settledClaims[0];
-  const isSettledOnChain = claimSettled || (latestSettledClaim && latestSettledClaim.amountEth > 0);
-  const activeTxHash = txHash || latestSettledClaim?.txHash || '';
-
   // On-Chain vs Instant Mode Toggle
   const [settlementMode, setSettlementMode] = useState('sepolia'); // 'sepolia' | 'simulation'
   const [onChainStep, setOnChainStep] = useState(''); // 'generating' | 'broadcasting' | 'mining' | 'settled' | 'error'
   const [txHash, setTxHash] = useState('');
   const [onChainError, setOnChainError] = useState('');
+
+  // Derive settlement status from incoming claims ledger or local state
+  const latestSettledClaim = settledClaims[0];
+  const isSettledOnChain = claimSettled || (latestSettledClaim && latestSettledClaim.amountEth > 0);
+  const activeTxHash = txHash || latestSettledClaim?.txHash || '';
 
   // Emergency Trauma Break-Glass Modal State
   const [showBreakGlassModal, setShowBreakGlassModal] = useState(false);
