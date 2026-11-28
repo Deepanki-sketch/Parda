@@ -25,6 +25,7 @@ export const DEMO_USERS = {
     id: 'patient-001',
     name: 'Alex Doe',
     email: 'alex.doe@parda.health',
+    password: 'parda@patient2026',
     address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
     policyId: 'POL-987654-ZKP',
     policyProvider: 'HealthShield Mutual Decentralized Pool',
@@ -37,6 +38,7 @@ export const DEMO_USERS = {
     id: 'hosp-101',
     name: 'St. Jude Medical Center',
     loginId: 'stjude@parda.health',
+    password: 'parda@hospital2026',
     licenseNo: 'LIC-NY-2024-8849',
     address: '0x70997970C51812dc3A010C7d01b50e0d17dc79C8',
     merkleRootVerified: true,
@@ -47,6 +49,7 @@ export const DEMO_USERS = {
     id: 'hosp-102',
     name: 'Metropolitan General Hospital',
     loginId: 'metropolitan@parda.health',
+    password: 'parda@hospital2026',
     licenseNo: 'LIC-CA-2023-1102',
     address: '0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65',
     merkleRootVerified: true,
@@ -56,7 +59,8 @@ export const DEMO_USERS = {
     role: 'insurer',
     id: 'ins-001',
     name: 'HealthShield Mutual',
-    loginId: 'underwriter@healthshield.eth',
+    loginId: 'underwriting@healthshield.eth',
+    password: 'parda@insurer2026',
     poolId: 'INS-ETH-POOL-01',
     address: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
     merkleRoot: '0x08581786b454cf726808eca1e5bddfbb948f741cd5ae3d89b6c65f3aeda1da7b',
@@ -67,12 +71,41 @@ export const DEMO_USERS = {
     id: 'ins-002',
     name: 'Star Health Decentralized Pool',
     loginId: 'claims@starhealth.eth',
+    password: 'parda@insurer2026',
     poolId: 'INS-ETH-STAR-02',
     address: '0x90F79bf6EB2c4f870365E785982E1f101E93b906',
     merkleRoot: '0x08581786b454cf726808eca1e5bddfbb948f741cd5ae3d89b6c65f3aeda1da7b',
     coverageCapEth: '5.0',
   },
 };
+
+/**
+ * Verify credentials against demo store or custom format
+ */
+export function verifyCredentials(role, loginId, password) {
+  const normLogin = (loginId || '').trim().toLowerCase();
+
+  if (role === 'patient') {
+    if (normLogin === 'alex.doe@parda.health' || normLogin === 'alex') {
+      return { success: true, user: DEMO_USERS.patient };
+    }
+  } else if (role === 'hospital') {
+    if (normLogin === 'stjude@parda.health' || normLogin === 'stjude' || normLogin === 'lic-ny-2024-8849') {
+      return { success: true, user: DEMO_USERS.hospital };
+    }
+    if (normLogin === 'metropolitan@parda.health' || normLogin === 'metropolitan' || normLogin === 'lic-ca-2023-1102') {
+      return { success: true, user: DEMO_USERS.hospital_alt };
+    }
+  } else if (role === 'insurer') {
+    if (normLogin === 'underwriting@healthshield.eth' || normLogin === 'healthshield' || normLogin === 'ins-eth-pool-01') {
+      return { success: true, user: DEMO_USERS.insurer };
+    }
+    if (normLogin === 'claims@starhealth.eth' || normLogin === 'starhealth' || normLogin === 'ins-eth-star-02') {
+      return { success: true, user: DEMO_USERS.insurer_alt };
+    }
+  }
+  return { success: false };
+}
 
 const STORAGE_KEYS = {
   ACTIVE_SESSION: 'parda_role_active_session_v3',

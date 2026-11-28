@@ -35,6 +35,7 @@ export default function HospitalPortal({
   onSettleClaim,
   onSubmitClaimToInsurer,
   pendingClaims = [],
+  settledClaims = [],
   activeHospitalSession,
   isBreakGlassActive,
   breakGlassReason,
@@ -53,6 +54,11 @@ export default function HospitalPortal({
   const [claimSubmitted, setClaimSubmitted] = useState(false);
   const [nullifier, setNullifier] = useState(null);
   const [showConstraintDetails, setShowConstraintDetails] = useState(false);
+
+  // Derive settlement status from incoming claims ledger or local state
+  const latestSettledClaim = settledClaims[0];
+  const isSettledOnChain = claimSettled || (latestSettledClaim && latestSettledClaim.amountEth > 0);
+  const activeTxHash = txHash || latestSettledClaim?.txHash || '';
 
   // On-Chain vs Instant Mode Toggle
   const [settlementMode, setSettlementMode] = useState('sepolia'); // 'sepolia' | 'simulation'
@@ -756,7 +762,7 @@ export default function HospitalPortal({
                         </div>
                       )}
                     </div>
-                  ) : !claimSettled ? (
+                  ) : !isSettledOnChain ? (
                     /* Awaiting Insurer Settlement Banner */
                     <div className="space-y-3 font-mono">
                       <div className="bg-amber-950/70 border border-amber-500/40 rounded-xl p-4 text-center space-y-2 text-xs">
@@ -788,13 +794,13 @@ export default function HospitalPortal({
                           <span>CLAIM SETTLED ON-CHAIN!</span>
                         </div>
                         <div className="text-[#AEB8AA] text-[11px]">
-                          Payout of {claimAmount} ETH (₹{claimInr.toLocaleString('en-IN')}) autonomously released to Hospital Treasury.
+                          Payout of {latestSettledClaim?.amountEth || claimAmount} ETH (₹{((parseFloat(latestSettledClaim?.amountEth) || parseFloat(claimAmount)) * INR_PER_ETH).toLocaleString('en-IN')}) autonomously released to Hospital Treasury.
                         </div>
 
-                        {txHash && (
+                        {activeTxHash && (
                           <div className="pt-2 border-t border-emerald-500/20">
                             <a
-                              href={`https://sepolia.etherscan.io/tx/${txHash}`}
+                              href={`https://sepolia.etherscan.io/tx/${activeTxHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center space-x-1.5 text-xs text-[#B99561] hover:text-[#c9a674] underline underline-offset-4"

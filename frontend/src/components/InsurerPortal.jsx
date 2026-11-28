@@ -52,6 +52,7 @@ export default function InsurerPortal({
   const [settlingStep, setSettlingStep] = useState(''); // 'prompt' | 'broadcasting' | 'mining' | 'done' | 'error'
   const [settleError, setSettleError] = useState('');
   const [settledSuccessTx, setSettledSuccessTx] = useState('');
+  const [payoutMode, setPayoutMode] = useState('testnet_micro'); // 'testnet_micro' | 'full'
 
   const { account, isSepolia, connectWallet, switchNetwork, getProviderOrSigner } = useWallet();
 
@@ -157,7 +158,11 @@ export default function InsurerPortal({
 
       const payoutAddress = claim.hospitalAddress || '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
       const numClaimAmount = parseFloat(claim.amountEth) || 1.5;
-      const payoutWei = ethers.parseEther(String(claim.amountEth || '0.0005'));
+      
+      // Real testnet transfer amount: 0.0001 ETH ($0.30) on Sepolia prevents "insufficient funds"
+      // while full face value (1.50 ETH / ₹15,000) is recognized in smart contract and ledger.
+      const transferAmountEth = payoutMode === 'full' ? String(numClaimAmount) : '0.0001';
+      const payoutWei = ethers.parseEther(transferAmountEth);
       const payoutWeiHex = "0x" + payoutWei.toString(16);
 
       setSettlingStep('broadcasting');
@@ -387,7 +392,37 @@ export default function InsurerPortal({
                 </div>
 
                 {/* Settle Action Button (MetaMask Trigger) */}
-                <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+                <div className="flex items-center justify-between text-[11px] font-mono text-sage-muted px-1 pt-1">
+                  <span>MetaMask Transfer Amount:</span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setPayoutMode('testnet_micro')}
+                      className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${
+                        payoutMode === 'testnet_micro'
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-bold shadow-sm'
+                          : 'bg-forest-850 text-sage-muted hover:text-ivory-200'
+                      }`}
+                      title="Micro-payout prevents insufficient funds error on Sepolia faucets"
+                    >
+                      ⚡ Testnet Safe (0.0001 SEP)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPayoutMode('full')}
+                      className={`px-2 py-0.5 rounded text-[10px] cursor-pointer transition-all ${
+                        payoutMode === 'full'
+                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-bold shadow-sm'
+                          : 'bg-forest-850 text-sage-muted hover:text-ivory-200'
+                      }`}
+                      title="Requires full 1.50 Sepolia testnet ETH balance"
+                    >
+                      Full Face Value ({claim.amountEth} SEP)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
                   <button
                     type="button"
                     onClick={() => handleSettleClaimMetaMask(claim)}
@@ -399,7 +434,7 @@ export default function InsurerPortal({
                       {settlingClaimId === claim.id && settlingStep === 'prompt' && '1. Confirm in MetaMask Popup...'}
                       {settlingClaimId === claim.id && settlingStep === 'broadcasting' && '2. Broadcasting Payout to Sepolia...'}
                       {settlingClaimId === claim.id && settlingStep === 'mining' && '3. Mining on Sepolia...'}
-                      {(!settlingStep || settlingClaimId !== claim.id) && `Accept & Settle ${claim.amountEth} ETH via MetaMask`}
+                      {(!settlingStep || settlingClaimId !== claim.id) && `Accept & Settle via MetaMask (${payoutMode === 'full' ? `${claim.amountEth} SEP` : '0.0001 SEP'})`}
                     </span>
                   </button>
 
@@ -573,6 +608,7 @@ export default function InsurerPortal({
                   <th className="py-3 px-3.5">Amount (ETH / INR)</th>
                   <th className="py-3 px-3.5">Clinical Privacy</th>
                   <th className="py-3 px-3.5">Proof Status</th>
+                  <th className="py-3 px-3.5">On-Chain Tx (Etherscan)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage-500/10">
@@ -595,10 +631,29 @@ export default function InsurerPortal({
                       </span>
                     </td>
                     <td className="py-3.5 px-3.5">
-                      <span className="inline-flex items-center space-x-1 text-brass-400 font-bold">
-                        <CheckCircle className="w-3.5 h-3.5 text-brass-400" />
+                      <span className="inline-flex items-center space-x-1 text-emerald-400 font-bold">
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
                         <span>{claim.status || 'VERIFIED VALID'}</span>
                       </span>
+                    </td>
+                    <td className="py-3.5 px-3.5">
+                      {claim.txHash ? (
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${claim.txHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#12231C] border border-[#B99561]/50 text-[#B99561] hover:text-[#F3EFE5] hover:border-[#B99561] text-[11px] font-mono font-bold transition-all shadow-sm"
+                          title={`View transaction on Sepolia: ${claim.txHash}`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                          <span>{claim.txHash.slice(0, 6)}...{claim.txHash.slice(-4)}</span>
+                          <ExternalLink className="w-3 h-3 text-[#B99561]" />
+                        </a>
+                      ) : (
+                        <span className="text-sage-muted text-[10px] font-mono px-2 py-0.5 rounded bg-forest-900 border border-sage-500/20">
+                          Anchored
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -621,6 +676,9 @@ export default function InsurerPortal({
                   </td>
                   <td className="py-3.5 px-3.5 text-brass-400 font-semibold">
                     ✖ REPLAY BLOCKED ON-CHAIN
+                  </td>
+                  <td className="py-3.5 px-3.5 text-rose-400/80 font-mono text-[10px]">
+                    Reverted (No Tx)
                   </td>
                 </tr>
               </tbody>

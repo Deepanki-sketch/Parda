@@ -345,6 +345,7 @@ export default function App() {
             onSettleClaim={handleAcceptAndSettleClaim}
             onSubmitClaimToInsurer={handleSubmitClaimToInsurer}
             pendingClaims={pendingClaims}
+            settledClaims={settledClaims}
             activeHospitalSession={activeRoleSession.user}
             isBreakGlassActive={isBreakGlassActive}
             breakGlassReason={breakGlassReason}

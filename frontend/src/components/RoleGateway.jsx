@@ -96,6 +96,109 @@ export default function RoleGateway({
         </p>
       </div>
 
+      {/* ========================================================================= */}
+      {/* DEMO ACCOUNTS & CREDENTIALS CHEAT SHEET (HACKATHON EVALUATION)            */}
+      {/* ========================================================================= */}
+      <div className="bg-[#12231C] border-2 border-[#B99561]/50 rounded-2xl p-5 text-[#F3EFE5] space-y-4 font-sans shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#9DAF9D]/20 pb-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-7 h-7 rounded-lg bg-[#0B1713] border border-[#B99561]/40 flex items-center justify-center text-[#B99561]">
+              <Key className="w-3.5 h-3.5" />
+            </div>
+            <div>
+              <span className="font-serif font-bold text-sm text-[#F3EFE5]">
+                Demo Credentials & Quick Sign-In Directory
+              </span>
+              <p className="text-[11px] text-[#AEB8AA]">
+                Pre-configured zero-knowledge test personas with simulated credentials and wallet roots.
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono font-bold px-2.5 py-1 rounded-full bg-[#B99561] text-[#0B1713] shrink-0 self-start sm:self-auto">
+            1-Click Ready
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 text-xs font-mono">
+          
+          {/* Patient Persona */}
+          <div className="p-3.5 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/20 space-y-2 relative group hover:border-[#B99561] transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[#B99561] font-bold flex items-center space-x-1.5">
+                <User className="w-3.5 h-3.5" />
+                <span>1. Patient Account</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleQuickPatient}
+                className="text-[10px] font-bold text-[#0B1713] bg-[#B99561] hover:bg-[#c9a674] px-2 py-0.5 rounded cursor-pointer transition-colors shadow-sm"
+              >
+                Auto-Login →
+              </button>
+            </div>
+            <div className="text-[11px] text-[#AEB8AA] space-y-1">
+              <div>Name: <span className="text-[#F3EFE5] font-semibold">Alex Doe</span></div>
+              <div>Email: <span className="text-[#F3EFE5]">alex.doe@parda.health</span></div>
+              <div>Password: <span className="text-[#F3EFE5]">parda@patient2026</span></div>
+              <div className="text-[10px] text-sage-muted pt-1 border-t border-[#9DAF9D]/10">
+                Policy: POL-987654-ZKP (5.0 ETH Cap)
+              </div>
+            </div>
+          </div>
+
+          {/* Hospital Persona */}
+          <div className="p-3.5 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/20 space-y-2 relative group hover:border-[#B99561] transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[#B99561] font-bold flex items-center space-x-1.5">
+                <Building2 className="w-3.5 h-3.5" />
+                <span>2. Hospital Provider</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => handleQuickHospital('hospital')}
+                className="text-[10px] font-bold text-[#0B1713] bg-[#B99561] hover:bg-[#c9a674] px-2 py-0.5 rounded cursor-pointer transition-colors shadow-sm"
+              >
+                Auto-Login →
+              </button>
+            </div>
+            <div className="text-[11px] text-[#AEB8AA] space-y-1">
+              <div>Hospital: <span className="text-[#F3EFE5] font-semibold">St. Jude Medical</span></div>
+              <div>Login ID: <span className="text-[#F3EFE5]">stjude@parda.health</span></div>
+              <div>Password: <span className="text-[#F3EFE5]">parda@hospital2026</span></div>
+              <div className="text-[10px] text-sage-muted pt-1 border-t border-[#9DAF9D]/10">
+                License: LIC-NY-2024-8849 (Merkle Root #1)
+              </div>
+            </div>
+          </div>
+
+          {/* Insurer Persona */}
+          <div className="p-3.5 rounded-xl bg-[#0B1713] border border-[#9DAF9D]/20 space-y-2 relative group hover:border-[#B99561] transition-all">
+            <div className="flex items-center justify-between">
+              <span className="text-[#B99561] font-bold flex items-center space-x-1.5">
+                <Landmark className="w-3.5 h-3.5" />
+                <span>3. Insurer Underwriter</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => handleQuickInsurer('insurer')}
+                className="text-[10px] font-bold text-[#0B1713] bg-[#B99561] hover:bg-[#c9a674] px-2 py-0.5 rounded cursor-pointer transition-colors shadow-sm"
+              >
+                Auto-Login →
+              </button>
+            </div>
+            <div className="text-[11px] text-[#AEB8AA] space-y-1">
+              <div>Pool: <span className="text-[#F3EFE5] font-semibold">HealthShield Mutual</span></div>
+              <div>Login ID: <span className="text-[#F3EFE5]">underwriting@healthshield.eth</span></div>
+              <div>Password: <span className="text-[#F3EFE5]">parda@insurer2026</span></div>
+              <div className="text-[10px] text-sage-muted pt-1 border-t border-[#9DAF9D]/10">
+                Escrow: ClaimManager.sol (Sepolia Pool)
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       {/* 3 Core Roles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
