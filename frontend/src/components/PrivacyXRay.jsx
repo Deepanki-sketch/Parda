@@ -2,12 +2,21 @@ import React from 'react';
 import { Eye, Shield, Lock, CheckCircle2, FileText, Database } from 'lucide-react';
 import { MOCK_FHIR_RECORD } from '../data/mockData';
 
-export default function PrivacyXRay({ claimSettled, settledClaims = [], latestClaim, isBreakGlassActive }) {
+export default function PrivacyXRay({
+  claimSettled,
+  settledClaims = [],
+  latestClaim,
+  isBreakGlassActive,
+  currentPatient,
+  syncedPatientMeta,
+}) {
   const currentClaim = latestClaim || settledClaims[0];
   const claimEth = currentClaim ? currentClaim.amountEth : 1.5;
   const claimInr = Math.round(claimEth * 10000);
   const nullifier = currentClaim ? currentClaim.nullifier : '0x2dc35a81e9f4b0028c794029482019482019482019f3';
   const payee = currentClaim ? currentClaim.payee : '0x70997970C51812dc3A010C7d01b50e0d17dc79C8';
+  const patientName = syncedPatientMeta?.name || currentPatient?.name || 'Alex Doe';
+  const patientDob = syncedPatientMeta?.dob || currentPatient?.dob || '1992-05-14';
 
   return (
     <div className="space-y-8 font-sans text-[#F3EFE5]">
@@ -51,7 +60,7 @@ export default function PrivacyXRay({ claimSettled, settledClaims = [], latestCl
           <div className="space-y-3 font-mono text-xs">
             <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
               <span className="text-[#AEB8AA]/70 block mb-1">Patient Identity:</span>
-              <span className="text-[#F3EFE5] font-semibold">Alex Doe (DOB: 1992-05-14)</span>
+              <span className="text-[#F3EFE5] font-semibold">{patientName} (DOB: {patientDob})</span>
             </div>
 
             <div className="p-3 rounded-xl bg-[#0B1713] stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>

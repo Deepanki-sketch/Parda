@@ -407,3 +407,37 @@ export function setSelectedDelegatedHospital(hosp) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEYS.SELECTED_HOSPITAL, JSON.stringify(hosp));
 }
+
+// Hospital enclave ECDH P-256 private decryption keys (only loaded inside Hospital role context)
+const HOSPITAL_ECDH_PRIVATE_KEYS = {
+  '0x70997970c51812dc3a010c7d01b50e0d17dc79c8': {
+    key_ops: ['deriveBits'],
+    ext: true,
+    kty: 'EC',
+    x: 'Xd45IOo_hAqzak3KFn0Omk0vpMeWtXD1vLwwiDaTFkA',
+    y: 'OEjb__iLmQqQaAiIsl2nmrzD-RcPknPeDYu4yMEQ438',
+    crv: 'P-256',
+    d: 'VUKjemwwYtCkYZp8ahP8DMrlXw0NGogRgupp333RBhk',
+  },
+  '0x15d34aaf54267db7d7c367839aaf71a00a2c6a65': {
+    key_ops: ['deriveBits'],
+    ext: true,
+    kty: 'EC',
+    x: 'K_gG4Gfv8rR3AH3sM4A7qb8xZ5FFwiORy8WXhfUqTCo',
+    y: 'Zimwlf3PXA9JEoC1SGAi02UN9rSlLe1CI314ZJdloMI',
+    crv: 'P-256',
+    d: 'NaYdJFmW8LGOgQxXv-egO645Vje94yxJwRL78wftHBA',
+  },
+};
+
+export function getHospitalPrivateEcdhJwk(hospitalSession) {
+  const addr = hospitalSession?.address?.toLowerCase();
+  if (addr && HOSPITAL_ECDH_PRIVATE_KEYS[addr]) {
+    return HOSPITAL_ECDH_PRIVATE_KEYS[addr];
+  }
+  const idStr = String(hospitalSession?.id || '');
+  if (idStr.includes('102')) {
+    return HOSPITAL_ECDH_PRIVATE_KEYS['0x15d34aaf54267db7d7c367839aaf71a00a2c6a65'];
+  }
+  return HOSPITAL_ECDH_PRIVATE_KEYS['0x70997970c51812dc3a010c7d01b50e0d17dc79c8'];
+}

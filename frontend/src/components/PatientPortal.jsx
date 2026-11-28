@@ -33,7 +33,8 @@ import {
   fetchEncryptedRecord,
 } from '../services/healthRecordService';
 import { isSupabaseConfigured, SUPABASE_URL } from '../services/supabaseClient';
-import { computeSha256 } from '../services/cryptoService';
+import { computeSha256, wrapPatientKeyForGrantee } from '../services/cryptoService';
+import { getDurationMs } from '../services/syncService';
 import {
   buildFhirBundleFromPatient,
   ethToInr,
@@ -47,6 +48,12 @@ export default function PatientPortal({
   setIpfsCid,
   doctorAccessGranted,
   setDoctorAccessGranted,
+  activeGrants = [],
+  onGrantHospitalAccess,
+  onRevokeHospitalAccess,
+  onPatientRecordSynced,
+  syncStatus,
+  syncRoomId,
   addAuditLog,
   claimSettled: externalClaimSettled,
   settledClaims = [],
@@ -60,11 +67,23 @@ export default function PatientPortal({
 }) {
   const activePatient = currentPatient || MOCK_PATIENT;
   const activeFhirRecord = buildFhirBundleFromPatient(activePatient);
+  const recordFingerprint = JSON.stringify({
+    id: activePatient.id,
+    addr: activePatient.address,
+    name: activePatient.name,
+    bloodGroup: activePatient.bloodGroup,
+    allergies: activePatient.allergies,
+    cond: activePatient.condition,
+    proc: activePatient.procedure,
+    rx: activePatient.prescription,
+    files: (activePatient.attachedFiles || []).map((f) => f.id || f.fileHash),
+  });
 
   const [selectedHospital, setSelectedHospital] = useState(MOCK_HOSPITALS[0].id);
   const [duration, setDuration] = useState('1 hour');
   const [showSensitive, setShowSensitive] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [isGranting, setIsGranting] = useState(false);
   const [previewingDoc, setPreviewingDoc] = useState(null);
   
   // Cloud Sync & Encryption State
@@ -78,22 +97,12 @@ export default function PatientPortal({
   const [copiedHash, setCopiedHash] = useState(false);
   const [isAttachedSectionOpen, setIsAttachedSectionOpen] = useState(false);
 
-  const [activeGrants, setActiveGrants] = useState(() => {
-    if (doctorAccessGranted) {
-      return [{
-        id: 1,
-        hospitalName: 'St. Jude Medical Center',
-        duration: '1 hour',
-        grantedAt: 'Just now',
-      }];
-    }
-    return [];
-  });
-
   const { account } = useWallet();
   const sharingSectionRef = useRef(null);
+  const activeGrantsRef = useRef(activeGrants);
+  activeGrantsRef.current = activeGrants;
 
-  // Initialize and Auto-Sync to Supabase Cloud on mount or when patient changes
+  // Initialize and Auto-Sync to Supabase Cloud on mount or when patient record updates
   useEffect(() => {
     let isMounted = true;
 
@@ -113,7 +122,7 @@ export default function PatientPortal({
           setRecordHash(hash);
         }
 
-        // 3. Check if already synced or sync now
+        // 3. Encrypt and upsert ciphertext to Supabase
         setIsSyncing(true);
         const result = await uploadEncryptedRecord({
           patientAddress: patientAddr,
@@ -122,11 +131,50 @@ export default function PatientPortal({
         });
 
         if (isMounted) {
+          const finalHash = result.recordHash || hash;
           setIsSyncing(false);
           setCloudSynced(result.success);
           setCloudRecordId(result.id);
           setIsEncrypted(true);
-          if (result.recordHash) setRecordHash(result.recordHash);
+          setRecordHash(finalHash);
+
+          if (onPatientRecordSynced) {
+            const patientMeta = {
+              id: activePatient.id,
+              name: activePatient.name,
+              dob: activePatient.dob,
+              gender: activePatient.gender,
+              address: patientAddr,
+              abhaId: activePatient.abhaId || `ABHA-${activePatient.id}`,
+              policyId: activePatient.policyId,
+              policyLimitEth: activePatient.policyLimitEth,
+              policyLimitInr: activePatient.policyLimitInr,
+              policyExpiry: activePatient.policyExpiry,
+              bloodGroup: activePatient.bloodGroup || 'O+',
+              allergies: activePatient.allergies || 'Penicillin, Sulfa drugs',
+              recordHash: finalHash,
+              updatedAt: new Date().toISOString(),
+            };
+
+            let updatedGrant = null;
+            const currentGrant = (activeGrantsRef.current || []).find(
+              (g) => !g.isRevoked && g.recordHash !== finalHash
+            );
+            if (currentGrant) {
+              const targetHosp =
+                MOCK_HOSPITALS.find((h) => h.id === Number(currentGrant.hospitalId)) || MOCK_HOSPITALS[0];
+              if (targetHosp?.ecdhPublicJwk) {
+                const wrappedDek = await wrapPatientKeyForGrantee(keyBundle.base64Key, targetHosp.ecdhPublicJwk);
+                updatedGrant = {
+                  ...currentGrant,
+                  patientAddress: patientAddr,
+                  recordHash: finalHash,
+                  wrappedDek,
+                };
+              }
+            }
+            onPatientRecordSynced(patientMeta, updatedGrant);
+          }
         }
       } catch (err) {
         console.warn('[Parda] Vault initialization notice:', err);
@@ -139,7 +187,7 @@ export default function PatientPortal({
     return () => {
       isMounted = false;
     };
-  }, [account, activePatient.id]);
+  }, [account, recordFingerprint]);
 
   const handleManualSync = async () => {
     setIsSyncing(true);
@@ -151,10 +199,29 @@ export default function PatientPortal({
         recordData: activeFhirRecord,
         key: keyBundle.key,
       });
+      const finalHash = result.recordHash || recordHash;
       setIsSyncing(false);
       setCloudSynced(result.success);
       setCloudRecordId(result.id);
-      if (result.recordHash) setRecordHash(result.recordHash);
+      if (finalHash) setRecordHash(finalHash);
+      if (onPatientRecordSynced) {
+        onPatientRecordSynced({
+          id: activePatient.id,
+          name: activePatient.name,
+          dob: activePatient.dob,
+          gender: activePatient.gender,
+          address: patientAddr,
+          abhaId: activePatient.abhaId || `ABHA-${activePatient.id}`,
+          policyId: activePatient.policyId,
+          policyLimitEth: activePatient.policyLimitEth,
+          policyLimitInr: activePatient.policyLimitInr,
+          policyExpiry: activePatient.policyExpiry,
+          bloodGroup: activePatient.bloodGroup || 'O+',
+          allergies: activePatient.allergies || 'Penicillin, Sulfa drugs',
+          recordHash: finalHash,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       setStatusMessage(result.storage === 'supabase_cloud' ? 'Synced to Supabase Cloud Vault!' : 'Saved in local encrypted vault.');
       
       if (addAuditLog) {
@@ -197,60 +264,114 @@ export default function PatientPortal({
     }
   };
 
-  const handleGrant = () => {
+  const handleGrant = async () => {
+    if (isGranting) return;
+    setIsGranting(true);
     const hospital = MOCK_HOSPITALS.find((h) => h.id === Number(selectedHospital)) || MOCK_HOSPITALS[0];
-    
-    const newGrant = {
-      id: Date.now(),
-      hospitalName: hospital.name,
-      duration: duration,
-      grantedAt: 'Just now',
-    };
 
-    setActiveGrants((prev) => [newGrant, ...prev.filter((g) => g.hospitalName !== hospital.name)]);
-    setDoctorAccessGranted(true);
-    setIsEncrypted(true);
+    try {
+      const patientAddr = account || activePatient.address;
+      let activeKeyBase64 = patientKeyBase64;
+      let keyObj = null;
 
-    // Share sovereign decryption token to authorized enclave session
-    if (patientKeyBase64) {
-      localStorage.setItem('parda_authorized_grant_key', patientKeyBase64);
-      localStorage.setItem('parda_authorized_record_hash', recordHash);
-    }
+      if (!activeKeyBase64) {
+        const keyBundle = await getOrCreatePatientKey(patientAddr);
+        activeKeyBase64 = keyBundle.base64Key;
+        keyObj = keyBundle.key;
+        setPatientKeyBase64(activeKeyBase64);
+      }
 
-    setStatusMessage(`Access & Decryption Token granted to ${hospital.name} for ${duration}.`);
+      // Ensure latest ciphertext is stored in Supabase before issuing wrapped DEK grant
+      let currentRecordHash = recordHash;
+      if (!currentRecordHash || !cloudSynced) {
+        const uploadRes = await uploadEncryptedRecord({
+          patientAddress: patientAddr,
+          recordData: activeFhirRecord,
+          key: keyObj || undefined,
+        });
+        currentRecordHash = uploadRes.recordHash || (await computeSha256(activeFhirRecord));
+        setRecordHash(currentRecordHash);
+        setCloudSynced(true);
+        if (uploadRes.id) setCloudRecordId(uploadRes.id);
+      }
 
-    if (addAuditLog) {
-      addAuditLog({
+      // Wrap patient's 256-bit AES DEK using target Hospital's ECDH P-256 public key
+      const wrappedDek = await wrapPatientKeyForGrantee(activeKeyBase64, hospital.ecdhPublicJwk);
+      const durationMs = getDurationMs(duration);
+      const expiresAt = new Date(Date.now() + durationMs).toISOString();
+
+      const newGrant = {
+        id: `grant-${hospital.id}-${String(patientAddr).slice(0, 8).toLowerCase()}`,
+        hospitalId: hospital.id,
+        hospitalName: hospital.name,
+        hospitalAddress: hospital.address,
+        patientAddress: patientAddr,
+        patientName: activePatient.name,
+        recordHash: currentRecordHash,
+        wrappedDek,
+        duration,
+        durationMs,
+        expiresAt,
+        grantedAt: 'Just now',
+        grantedAtIso: new Date().toISOString(),
+        isRevoked: false,
+      };
+
+      setIsEncrypted(true);
+
+      // Local enclave fallback cache (raw key stays only on same browser)
+      if (activeKeyBase64) {
+        localStorage.setItem('parda_authorized_grant_key', activeKeyBase64);
+        localStorage.setItem('parda_authorized_record_hash', currentRecordHash);
+      }
+
+      const grantAudit = {
         type: 'ACCESS_GRANTED',
-        title: 'Hospital Enclave Access Granted',
-        detail: `${hospital.name} granted access (${duration}) | Decryption key shared with doctor session`,
+        title: 'Hospital Enclave Access Granted (ECDH-Wrapped DEK)',
+        detail: `${hospital.name} granted ${duration} access · DEK wrapped with P-256 ECDH + HKDF-SHA256 & synced via Supabase Realtime`,
         time: new Date().toLocaleTimeString(),
-      });
-    }
+      };
 
-    setTimeout(() => {
-      setStatusMessage('');
-    }, 4000);
+      if (onGrantHospitalAccess) {
+        onGrantHospitalAccess(newGrant, grantAudit);
+      } else {
+        setDoctorAccessGranted(true);
+        if (addAuditLog) addAuditLog(grantAudit);
+      }
+
+      setStatusMessage(`ECDH-Wrapped Access & Decryption Token synced live to ${hospital.name} for ${duration}.`);
+    } catch (err) {
+      console.error('[Parda] Failed to wrap and grant key:', err);
+      setStatusMessage(`Grant failed: ${err.message || 'WebCrypto requires HTTPS or localhost'}`);
+    } finally {
+      setIsGranting(false);
+      setTimeout(() => {
+        setStatusMessage('');
+      }, 4500);
+    }
   };
 
   const handleRevoke = (grantId) => {
     const target = activeGrants.find((g) => g.id === grantId);
-    setActiveGrants((prev) => prev.filter((g) => g.id !== grantId));
     if (activeGrants.length <= 1) {
-      setDoctorAccessGranted(false);
       localStorage.removeItem('parda_authorized_grant_key');
     }
-    setStatusMessage(`Access revoked${target ? ` for ${target.hospitalName}` : ''}.`);
 
-    if (addAuditLog) {
-      addAuditLog({
-        type: 'ACCESS_REVOKED',
-        title: 'Hospital Enclave Access Revoked',
-        detail: `Revoked permission for ${target ? target.hospitalName : 'hospital'}`,
-        time: new Date().toLocaleTimeString(),
-      });
+    const revokeAudit = {
+      type: 'ACCESS_REVOKED',
+      title: 'Hospital Enclave Access Revoked',
+      detail: `Revoked permission for ${target ? target.hospitalName : 'hospital'} across connected portals`,
+      time: new Date().toLocaleTimeString(),
+    };
+
+    if (onRevokeHospitalAccess) {
+      onRevokeHospitalAccess(grantId, revokeAudit);
+    } else {
+      if (activeGrants.length <= 1) setDoctorAccessGranted(false);
+      if (addAuditLog) addAuditLog(revokeAudit);
     }
 
+    setStatusMessage(`Access revoked${target ? ` for ${target.hospitalName}` : ''}.`);
     setTimeout(() => {
       setStatusMessage('');
     }, 3500);
@@ -1025,9 +1146,10 @@ export default function PatientPortal({
               <button
                 type="button"
                 onClick={handleGrant}
-                className="btn-parda-white w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer"
+                disabled={isGranting}
+                className="btn-parda-white w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-60"
               >
-                Grant access
+                {isGranting ? 'Wrapping Key & Syncing...' : 'Grant access'}
               </button>
             </div>
 
@@ -1056,7 +1178,7 @@ export default function PatientPortal({
                     >
                       <div>
                         <div className="text-[#F3EFE5] font-medium">{grant.hospitalName}</div>
-                        <div className="text-[#AEB8AA] text-[11px]">{grant.duration} · Sovereign Key Shared</div>
+                        <div className="text-[#AEB8AA] text-[11px]">{grant.duration} · ECDH-P256 Wrapped Key Shared</div>
                       </div>
                       <button
                         type="button"

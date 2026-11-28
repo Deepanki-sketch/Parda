@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Cpu, 
@@ -27,9 +27,16 @@ import { MOCK_PATIENT, MOCK_FHIR_RECORD, MOCK_HOSPITALS } from '../data/mockData
 import { useWallet } from '../context/WalletContext';
 import deployedConfig from '../contracts/deployed_addresses.json';
 import { ClaimManagerABI } from '../contracts/abis';
+import { unwrapPatientKeyWithPrivateKey } from '../services/cryptoService';
+import { fetchEncryptedRecord, decryptRecordWithKey } from '../services/healthRecordService';
+import { getHospitalPrivateEcdhJwk } from '../services/authService';
 
 export default function HospitalPortal({
   doctorAccessGranted,
+  activeHospitalGrant = null,
+  syncedPatientMeta = null,
+  syncStatus,
+  syncRoomId,
   claimSettled,
   hospitalBalanceEth = 14.20,
   onSettleClaim,
@@ -45,15 +52,22 @@ export default function HospitalPortal({
   setActiveRole,
   currentPatient,
 }) {
-  const activePatient = currentPatient || MOCK_PATIENT;
+  const activePatient = syncedPatientMeta || currentPatient || MOCK_PATIENT;
   const [claimAmount, setClaimAmount] = useState('1.5');
   const [hospitalPayeeAddress, setHospitalPayeeAddress] = useState(activeHospitalSession?.address || '');
   const [isProving, setIsProving] = useState(false);
   const [proverStep, setProverStep] = useState(0);
   const [proofGenerated, setProofGenerated] = useState(false);
   const [claimSubmitted, setClaimSubmitted] = useState(false);
+  const [submittedClaimId, setSubmittedClaimId] = useState(null);
   const [nullifier, setNullifier] = useState(null);
   const [showConstraintDetails, setShowConstraintDetails] = useState(false);
+
+  // Client-side ECDH DEK Unwrap & Decrypted FHIR State (held strictly in memory)
+  const [decryptedRecord, setDecryptedRecord] = useState(null);
+  const [decryptStatus, setDecryptStatus] = useState('idle'); // 'idle' | 'decrypting' | 'decrypted' | 'error'
+  const [decryptSource, setDecryptSource] = useState('');
+  const [decryptError, setDecryptError] = useState('');
 
   // On-Chain vs Instant Mode Toggle
   const [settlementMode, setSettlementMode] = useState('sepolia'); // 'sepolia' | 'simulation'
@@ -82,8 +96,104 @@ export default function HospitalPortal({
   const claimInr = Math.round(numClaim * INR_PER_ETH);
   const isOverPolicyLimit = numClaim > 5.0;
 
-  // Access is granted either via sovereign patient delegation OR emergency clinical break-glass
-  const hasAccess = doctorAccessGranted || isBreakGlassActive;
+  // Access is granted either via matched ECDH hospital delegation OR emergency clinical break-glass
+  const hasAccess = Boolean(activeHospitalGrant) || doctorAccessGranted || isBreakGlassActive;
+
+  // Automatically unwrap ECDH DEK and decrypt Supabase ciphertext when patient grants/updates access
+  useEffect(() => {
+    let cancelled = false;
+
+    async function unwrapAndDecrypt() {
+      if (!activeHospitalGrant?.wrappedDek) {
+        setDecryptedRecord(null);
+        setDecryptStatus('idle');
+        setDecryptError('');
+        return;
+      }
+
+      setDecryptStatus('decrypting');
+      setDecryptError('');
+
+      try {
+        const hospitalPrivJwk = getHospitalPrivateEcdhJwk(activeHospitalSession);
+        const aesKey = await unwrapPatientKeyWithPrivateKey(
+          activeHospitalGrant.wrappedDek,
+          hospitalPrivJwk
+        );
+
+        let encryptedRow = await fetchEncryptedRecord(
+          activeHospitalGrant.patientAddress || activePatient.address,
+          activeHospitalGrant.recordHash
+        );
+
+        if (!encryptedRow) {
+          await new Promise((r) => setTimeout(r, 600));
+          encryptedRow = await fetchEncryptedRecord(
+            activeHospitalGrant.patientAddress || activePatient.address,
+            activeHospitalGrant.recordHash
+          );
+        }
+
+        if (!encryptedRow?.ciphertext || !encryptedRow?.iv) {
+          throw new Error('Encrypted FHIR payload not yet found in Supabase vault');
+        }
+
+        const plaintextBundle = await decryptRecordWithKey(encryptedRow, aesKey);
+        if (!cancelled) {
+          setDecryptedRecord(plaintextBundle);
+          setDecryptSource(encryptedRow.source || 'supabase');
+          setDecryptStatus('decrypted');
+        }
+      } catch (err) {
+        console.warn('[Parda Hospital] ECDH unwrap/decrypt notice:', err);
+        if (!cancelled) {
+          setDecryptError(err.message || 'Unable to unwrap patient DEK');
+          setDecryptStatus('error');
+        }
+      }
+    }
+
+    unwrapAndDecrypt();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeHospitalGrant?.id,
+    activeHospitalGrant?.recordHash,
+    activeHospitalGrant?.wrappedDek?.wrappedDekBase64,
+    activeHospitalSession?.id,
+    activeHospitalSession?.address,
+  ]);
+
+  // Reflect live cross-laptop claim settlement when Insurer settles from another laptop
+  useEffect(() => {
+    if (!submittedClaimId) return;
+    const settledMatch = (settledClaims || []).find((c) => c.id === submittedClaimId);
+    if (settledMatch) {
+      setClaimSubmitted(true);
+      setOnChainStep('settled');
+      if (settledMatch.txHash) {
+        setTxHash(settledMatch.txHash);
+      }
+    }
+  }, [submittedClaimId, settledClaims]);
+
+  const displayPatient = {
+    ...activePatient,
+    ...(decryptedRecord?.patient || {}),
+  };
+  const displayCondition =
+    decryptedRecord?.condition ||
+    (isBreakGlassActive && !activeHospitalGrant
+      ? {
+          code: 'TRAUMA-ER',
+          display: 'Emergency Clinical Triage Override (Encrypted Vault Locked to Standard Consent)',
+        }
+      : MOCK_FHIR_RECORD.condition);
+  const displayProcedure = decryptedRecord?.procedure || MOCK_FHIR_RECORD.procedure;
+  const displayPrescription = decryptedRecord?.prescription || MOCK_FHIR_RECORD.prescription;
+  const displayDocCount = decryptedRecord?.documents?.length || 0;
 
   // Trigger Emergency Break-Glass after 2-step verification
   const handleConfirmBreakGlass = () => {
@@ -144,19 +254,21 @@ export default function HospitalPortal({
 
     const newClaim = {
       id: `claim-${Date.now()}`,
+      patientAddress: displayPatient.address || activePatient.address,
       hospitalName: activeHospitalSession?.name || 'St. Jude Medical Center',
       hospitalLicense: activeHospitalSession?.licenseNo || 'LIC-NY-2024-8849',
       hospitalAddress: safePayee,
       amountEth: numClaimAmount,
       amountInr: Math.round(numClaimAmount * INR_PER_ETH),
       nullifier: spentNullifier,
-      procedureCode: '99213',
-      procedureName: 'Outpatient Evaluation & Management (20-29 min)',
+      procedureCode: displayProcedure?.code || '99213',
+      procedureName: displayProcedure?.display || 'Outpatient Evaluation & Management (20-29 min)',
       status: 'PENDING_INSURER_SETTLEMENT',
       submittedAt: new Date().toLocaleTimeString(),
       merkleRoot: deployedConfig.hospitalMerkleRoot || '0x08581786b454cf726808eca1e5bddfbb948f741cd5ae3d89b6c65f3aeda1da7b',
     };
 
+    setSubmittedClaimId(newClaim.id);
     setClaimSubmitted(true);
     setOnChainStep('transmitted');
 
@@ -310,6 +422,7 @@ export default function HospitalPortal({
     setProverStep(0);
     setNullifier(null);
     setClaimSubmitted(false);
+    setSubmittedClaimId(null);
     setOnChainStep('');
     setTxHash('');
     setOnChainError('');
@@ -411,7 +524,7 @@ export default function HospitalPortal({
               <span>Provider Claim Engine • Circom 2.1 Prover Node</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-serif text-ivory-200 tracking-tight">
-              St. Jude Medical Center Enclave
+              {activeHospitalSession?.name || 'St. Jude Medical Center'} Enclave
             </h2>
             <p className="text-xs sm:text-sm text-sage-muted max-w-2xl font-sans">
               Compile local clinical electronic records into a succinct Groth16 zero-knowledge attestation. Only cryptographic proof scalars are transmitted to the insurer's ClaimManager contract on Sepolia.
@@ -507,7 +620,7 @@ export default function HospitalPortal({
               </div>
               <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] shrink-0">
                 <span className="text-emerald-400 bg-forest-900 px-2.5 py-1 rounded border border-emerald-500/30">
-                  Blood: O+ | Allergy Alert: Penicillin
+                  Blood: {displayPatient.bloodGroup || 'O+'} | Allergy Alert: {displayPatient.allergies || 'Penicillin'}
                 </span>
                 {onRevokeBreakGlass && (
                   <button
@@ -587,16 +700,16 @@ export default function HospitalPortal({
                 <div className="bg-forest-850 rounded p-4 space-y-2 text-xs font-mono stroke-2-golden" style={{ border: '2px solid #9E7C4B' }}>
                   <div className="flex items-center justify-between text-sage-muted">
                     <span>PATIENT:</span>
-                    <span className="font-semibold text-ivory-200">{activePatient.name}</span>
+                    <span className="font-semibold text-ivory-200">{displayPatient.name}</span>
                   </div>
                   <div className="flex items-center justify-between text-sage-muted">
                     <span>POLICY ID:</span>
-                    <span className="text-brass-400 font-bold">{activePatient.policyId}</span>
+                    <span className="text-brass-400 font-bold">{displayPatient.policyId || activePatient.policyId}</span>
                   </div>
                   <div className="flex items-center justify-between text-sage-muted">
                     <span>COVERAGE LIMIT:</span>
                     <span className="font-bold text-ivory-200">
-                      ₹{(activePatient.policyLimitInr || 50000).toLocaleString('en-IN')} ({activePatient.policyLimitEth || '5.0'} ETH)
+                      ₹{(displayPatient.policyLimitInr || 50000).toLocaleString('en-IN')} ({displayPatient.policyLimitEth || '5.0'} ETH)
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sage-muted">
@@ -613,11 +726,29 @@ export default function HospitalPortal({
                       <span>Supabase Cloud Vault Ingestion</span>
                     </span>
                     <span className="text-emerald-400 text-[10px] bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40">
-                      Decrypted In-Enclave
+                      {decryptStatus === 'decrypting'
+                        ? 'Unwrapping ECDH DEK...'
+                        : decryptStatus === 'decrypted'
+                        ? 'Decrypted via ECDH P-256'
+                        : isBreakGlassActive
+                        ? 'Emergency Override Active'
+                        : 'Decrypted In-Enclave'}
                     </span>
                   </div>
                   <div className="text-[11px] text-[#AEB8AA]">
-                    Ciphertext retrieved from Supabase table <code className="text-[#F3EFE5]">encrypted_health_records</code> and decrypted via patient's authorized sovereign key.
+                    {decryptStatus === 'decrypted' ? (
+                      <>
+                        Ciphertext fetched from Supabase (<code className="text-[#F3EFE5]">{decryptSource}</code>), unwrapped via ECDH P-256 + HKDF-SHA256, and verified against hash <code className="text-[#B99561]">{activeHospitalGrant?.recordHash?.slice(0, 12)}...</code>.
+                      </>
+                    ) : decryptError ? (
+                      <>
+                        Enclave sync status: <span className="text-amber-400">{decryptError}</span>
+                      </>
+                    ) : (
+                      <>
+                        Ciphertext retrieved from Supabase table <code className="text-[#F3EFE5]">encrypted_health_records</code> and decrypted via patient's authorized sovereign key.
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -629,10 +760,16 @@ export default function HospitalPortal({
                       Protected in Enclave
                     </span>
                   </div>
-                  <div className="text-sm font-semibold text-ivory-200 font-sans">{MOCK_FHIR_RECORD.condition.display}</div>
+                  <div className="text-sm font-semibold text-ivory-200 font-sans">{displayCondition.display}</div>
                   <div className="text-xs text-sage-muted font-mono">
-                    ICD-10: <span className="text-brass-400">{MOCK_FHIR_RECORD.condition.code}</span> | CPT: {MOCK_FHIR_RECORD.procedure.code} (Covered)
+                    ICD-10: <span className="text-brass-400">{displayCondition.code}</span> | CPT: {displayProcedure.code} (Covered)
+                    {displayDocCount > 0 && ` | ${displayDocCount} E2EE File${displayDocCount > 1 ? 's' : ''}`}
                   </div>
+                  {decryptStatus === 'decrypted' && displayPrescription?.medication && (
+                    <div className="text-[11px] text-sage-300 font-mono pt-1 border-t border-sage-500/15">
+                      Rx: {displayPrescription.medication}{displayPrescription.dosage ? ` — ${displayPrescription.dosage}` : ''}
+                    </div>
+                  )}
                 </div>
 
                 {/* Claim Amount & Payee Recipient */}
@@ -920,7 +1057,7 @@ export default function HospitalPortal({
                     { step: 1, title: '1. Hospital In-Circuit EdDSA Signature', desc: 'Verifies hospital Baby Jubjub key signed the claim message inside the circuit.' },
                     { step: 2, title: '2. Approved Hospital Merkle Membership', desc: 'Proves hospital public key leaf is in the regulator approved root (depth 8).' },
                     { step: 3, title: '3. Policy Commitment Verification', desc: 'Proves policyCommitment == Poseidon(patientIdHash, coveredSetRoot, limit, expiry, salt).' },
-                    { step: 4, title: '4. Procedure in Covered Set Merkle Tree', desc: `Proves procedure CPT ${MOCK_FHIR_RECORD.procedure.code} is a leaf in the policy’s private covered set (depth 6).` },
+                    { step: 4, title: '4. Procedure in Covered Set Merkle Tree', desc: `Proves procedure CPT ${displayProcedure.code} is a leaf in the policy’s private covered set (depth 6).` },
                     { step: 5, title: '5. 64-Bit Range & Coverage Checks', desc: `Proves claimAmount (${claimAmount} ETH) <= limit AND claimDay < policyExpiryDay.` },
                     { step: 6, title: '6. Anti-Replay Nullifier Derivation', desc: 'Derives nullifier = Poseidon(policySalt, recordId) to block double claims.' },
                     { step: 7, title: '7. Payout Recipient Address Binding', desc: 'Constrains recipient address to proof to prevent front-running redirection.' }

@@ -6,8 +6,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase project URL and anon public key
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://shkicyvjgnsypvsamicc.supabase.co';
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_GpGH2XemJfzBtuN692CVBQ_zLK8XTf_';
+export const SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL || 'https://shkicyvjgnsypvsamicc.supabase.co';
+export const SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_GpGH2XemJfzBtuN692CVBQ_zLK8XTf_';
 
 let client = null;
 
