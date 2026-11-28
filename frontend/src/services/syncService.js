@@ -351,7 +351,42 @@ export async function fetchSyncedWorkflowState(roomId = getSyncRoomId()) {
   return null;
 }
 
-export async function pushSyncedWorkflowState(nextState, roomId = getSyncRoomId(), channelRef = null, eventTag = 'state_update') {
+let cloudWriteChain = Promise.resolve();
+
+function enqueueCloudWrite(task) {
+  const run = cloudWriteChain.then(task, task);
+  cloudWriteChain = run.catch(() => {});
+  return run;
+}
+
+export function broadcastWorkflowStateImmediate(state, roomId = getSyncRoomId(), channelRef = null, eventTag = 'state_update') {
+  if (!isSupabaseConfigured() || !supabase || !channelRef || !state) return;
+  try {
+    const normalized = {
+      ...getDefaultWorkflowState(),
+      ...state,
+      activeGrants: (state.activeGrants || []).filter((g) => !g.isRevoked),
+      auditLogs: (state.auditLogs || DEFAULT_AUDIT_LOGS).slice(0, 50),
+      seq: Number(state.seq) || Number(state.rev) || 1,
+      rev: Number(state.seq) || Number(state.rev) || 1,
+      updatedAt: state.updatedAt || new Date().toISOString(),
+    };
+    channelRef
+      .send({
+        type: 'broadcast',
+        event: 'workflow_sync',
+        payload: {
+          roomId,
+          eventTag,
+          state: normalized,
+          sentAt: Date.now(),
+        },
+      })
+      .catch(() => {});
+  } catch {}
+}
+
+export async function pushSyncedWorkflowState(nextState, roomId = getSyncRoomId(), channelRef = null, eventTag = 'state_update', skipBroadcast = false) {
   const nextSeq = (Number(nextState.seq) || Number(nextState.rev) || 0) + 1;
   const normalized = {
     ...getDefaultWorkflowState(),
@@ -370,21 +405,23 @@ export async function pushSyncedWorkflowState(nextState, roomId = getSyncRoomId(
   }
 
   // 1. Immediate WebSocket Realtime Broadcast across all connected laptops
-  try {
-    if (channelRef) {
-      await channelRef.send({
-        type: 'broadcast',
-        event: 'workflow_sync',
-        payload: {
-          roomId,
-          eventTag,
-          state: normalized,
-          sentAt: Date.now(),
-        },
-      });
+  if (!skipBroadcast) {
+    try {
+      if (channelRef) {
+        await channelRef.send({
+          type: 'broadcast',
+          event: 'workflow_sync',
+          payload: {
+            roomId,
+            eventTag,
+            state: normalized,
+            sentAt: Date.now(),
+          },
+        });
+      }
+    } catch (err) {
+      console.warn('[Parda Sync] Realtime broadcast notice:', err);
     }
-  } catch (err) {
-    console.warn('[Parda Sync] Realtime broadcast notice:', err);
   }
 
   // 2. Persist snapshot in Supabase (dedicated tables OR envelope row in encrypted_health_records)
@@ -461,26 +498,28 @@ export async function applyMergedCloudMutation(
   channelRef = null,
   eventTag = 'state_update'
 ) {
-  let base = localFallbackState || getDefaultWorkflowState();
-  try {
-    const remote = await fetchSyncedWorkflowState(roomId);
-    if (remote) {
-      base = {
-        ...base,
-        ...remote,
-        seq: Math.max(Number(base.seq) || 0, Number(remote.seq) || 0),
-      };
-    }
-  } catch {}
+  return enqueueCloudWrite(async () => {
+    let base = localFallbackState || getDefaultWorkflowState();
+    try {
+      const remote = await fetchSyncedWorkflowState(roomId);
+      if (remote) {
+        base = {
+          ...base,
+          ...remote,
+          seq: Math.max(Number(base.seq) || 0, Number(remote.seq) || 0),
+        };
+      }
+    } catch {}
 
-  const patch = mutator(base);
-  const nextState = {
-    ...base,
-    ...patch,
-    seq: Math.max(Number(base.seq) || 0, Number(localFallbackState?.seq) || 0),
-  };
+    const patch = mutator(base);
+    const nextState = {
+      ...base,
+      ...patch,
+      seq: Math.max(Number(base.seq) || 0, Number(localFallbackState?.seq) || 0),
+    };
 
-  return pushSyncedWorkflowState(nextState, roomId, channelRef, eventTag);
+    return pushSyncedWorkflowState(nextState, roomId, channelRef, eventTag);
+  });
 }
 
 export async function syncGrantUpsert(grant, fallbackState, roomId = getSyncRoomId(), channelRef = null) {
@@ -592,6 +631,16 @@ export async function syncClaimUpsert(claim, fallbackState, roomId = getSyncRoom
   return applyMergedCloudMutation(
     fallbackState,
     (latest) => {
+      const latestLog = fallbackState?.auditLogs?.[0];
+      const mergedAuditLogs = latestLog
+        ? [
+            latestLog,
+            ...(latest.auditLogs || []).filter(
+              (l) => l.title !== latestLog.title || l.time !== latestLog.time
+            ),
+          ].slice(0, 50)
+        : latest.auditLogs;
+
       if (isSettledStatus) {
         const amt = parseFloat(claim.amountEth) || 1.5;
         const alreadySettled = (latest.settledClaims || []).some((c) => c.id === claim.id);
@@ -605,10 +654,12 @@ export async function syncClaimUpsert(claim, fallbackState, roomId = getSyncRoom
             ? latest.poolBalanceEth
             : parseFloat(Math.max(0, (Number(latest.poolBalanceEth ?? 10.0)) - amt).toFixed(4)),
           claimSettled: true,
+          auditLogs: mergedAuditLogs,
         };
       }
       return {
         pendingClaims: [claim, ...(latest.pendingClaims || []).filter((c) => c.id !== claim.id)],
+        auditLogs: mergedAuditLogs,
       };
     },
     roomId,
@@ -706,6 +757,7 @@ export function subscribeToWorkflowSync({ roomId = getSyncRoomId(), onRemoteStat
       }
     });
 
+  let extendedChannel = null;
   hasExtendedTables().then((enabled) => {
     if (closed || !enabled) return;
     const refreshFromCloud = async () => {
@@ -713,18 +765,20 @@ export function subscribeToWorkflowSync({ roomId = getSyncRoomId(), onRemoteStat
       if (fresh) emitIfFresh(fresh);
     };
 
-    channel
+    extendedChannel = supabase
+      .channel(`parda-db:${roomId}:${Date.now()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'access_grants' }, refreshFromCloud)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'insurance_claims' }, refreshFromCloud)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'portal_sync_state' }, refreshFromCloud);
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'portal_sync_state' }, refreshFromCloud)
+      .subscribe();
   });
 
-  // Safety-net reconciliation poll every 2.0s (handles late joins or dropped WebSockets cleanly)
+  // Safety-net reconciliation poll every 1.2s (handles late joins or dropped WebSockets cleanly)
   const pollInterval = setInterval(async () => {
     if (closed) return;
     const fresh = await fetchSyncedWorkflowState(roomId);
     if (fresh) emitIfFresh(fresh);
-  }, 2000);
+  }, 1200);
 
   return {
     channel,
@@ -738,6 +792,9 @@ export function subscribeToWorkflowSync({ roomId = getSyncRoomId(), onRemoteStat
       closed = true;
       clearInterval(pollInterval);
       supabase.removeChannel(channel).catch(() => {});
+      if (extendedChannel) {
+        supabase.removeChannel(extendedChannel).catch(() => {});
+      }
     },
   };
 }
