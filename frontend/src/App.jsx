@@ -19,9 +19,11 @@ import {
   clearActiveRoleSession,
   DEMO_USERS,
   getPendingClaims,
+  fetchPendingClaimsFromCloud,
   addPendingClaim,
   removePendingClaim,
   getSettledClaims,
+  fetchSettledClaimsFromCloud,
   addSettledClaim,
   getHospitalBalanceEth,
   setHospitalBalanceEth,
@@ -29,6 +31,7 @@ import {
   setPoolBalanceEth,
   getStoredDoctorAccessGranted,
   setStoredDoctorAccessGranted,
+  fetchDoctorAccessFromCloud,
   getSelectedDelegatedHospital,
   setSelectedDelegatedHospital,
 } from './services/authService';
@@ -179,6 +182,40 @@ export default function App() {
   // Claims Management (Pending Queue & Settled Ledger)
   const [pendingClaims, setPendingClaims] = useState(() => getPendingClaims());
   const [settledClaims, setSettledClaims] = useState(() => getSettledClaims());
+
+  // Cloud Sync on Mount & Role Switch: sync pending/settled claims & doctor access across laptops
+  useEffect(() => {
+    let isSubscribed = true;
+
+    async function syncCloudWorkflow() {
+      try {
+        const [cloudPending, cloudSettled, cloudAccess] = await Promise.all([
+          fetchPendingClaimsFromCloud(),
+          fetchSettledClaimsFromCloud(),
+          fetchDoctorAccessFromCloud(),
+        ]);
+
+        if (isSubscribed) {
+          if (cloudPending && cloudPending.length > 0) {
+            setPendingClaims(cloudPending);
+          }
+          if (cloudSettled && cloudSettled.length > 0) {
+            setSettledClaims(cloudSettled);
+          }
+          if (typeof cloudAccess === 'boolean') {
+            setDoctorAccessGrantedState(cloudAccess);
+          }
+        }
+      } catch (err) {
+        console.warn('[Parda] Cloud sync initialization notice:', err);
+      }
+    }
+
+    syncCloudWorkflow();
+    return () => {
+      isSubscribed = false;
+    };
+  }, [activeRole]);
 
   const totalSettledEth = settledClaims.reduce(
     (acc, c) => acc + (c.isReplayBlocked ? 0 : (parseFloat(c.amountEth) || 0)),
